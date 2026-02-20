@@ -33,7 +33,7 @@ export default function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="relative h-screen flex items-center justify-center">
+      <section className="relative h-96 flex items-center justify-center">
         <div 
           className="absolute inset-0 z-0"
           style={{
