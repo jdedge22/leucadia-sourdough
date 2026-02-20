@@ -1,80 +1,159 @@
-import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
-import { stripe } from '@/lib/stripe/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers';
+import { NextResponse } from 'next/server';
+import Stripe from 'stripe';
+import { createClient } from '@/lib/supabase/server';
+import {
+  sendOrderConfirmation,
+  sendSubscriptionWelcome,
+  sendPaymentFailed,
+  sendSubscriptionPaused,
+  sendSubscriptionCancelled,
+} from '@/emails/lib/sendEmail';
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2026-01-28.clover',
+});
 
-export async function POST(req: NextRequest) {
-  const body = await req.text()
-  const signature = req.headers.get('stripe-signature')!
+const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
-  let event: Stripe.Event
+export async function POST(req: Request) {
+  const body = await req.text();
+  const signature = headers().get('stripe-signature')!;
+
+  let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err: any) {
-    console.error('Webhook error:', err.message)
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
+    console.error(`Webhook signature verification failed: ${err.message}`);
+    return NextResponse.json({ error: err.message }, { status: 400 });
   }
 
-  const supabase = createServerClient()
+  const supabase = await createClient();
 
   try {
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object as Stripe.Checkout.Session
-      const customer = await stripe.customers.retrieve(session.customer as string) as Stripe.Customer
-      const deliveryAddress = JSON.parse(session.metadata?.delivery_address || '{}')
-      const deliveryDay = session.metadata?.delivery_day || 'thursday'
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        
+        // Get customer details
+        const customer = await stripe.customers.retrieve(session.customer as string) as Stripe.Customer;
+        const customerEmail = customer.email || session.customer_details?.email;
+        const customerName = customer.name || session.customer_details?.name?.split(' ')[0];
 
-      const { data: newCustomer } = await supabase
-        .from('customers')
-        .insert({
-          email: customer.email!,
-          first_name: customer.name?.split(' ')[0] || '',
-          last_name: customer.name?.split(' ').slice(1).join(' ') || '',
-          stripe_customer_id: customer.id,
-        })
-        .select()
-        .single()
+        // Get delivery details from metadata
+        const deliveryDay = session.metadata?.delivery_day || 'Thursday';
+        const deliveryDate = session.metadata?.delivery_date || '';
+        const deliveryAddress = session.metadata?.delivery_address || 
+          `${session.customer_details?.address?.line1}, ${session.customer_details?.address?.city}, ${session.customer_details?.address?.state} ${session.customer_details?.address?.postal_code}`;
 
-      if (!newCustomer) return NextResponse.json({ received: true })
-
-      const { data: newAddress } = await supabase
-        .from('delivery_addresses')
-        .insert({
-          customer_id: newCustomer.id,
-          street_address: deliveryAddress.streetAddress,
-          city: deliveryAddress.city,
-          zip_code: deliveryAddress.zipCode,
-          delivery_zone: deliveryDay,
-          is_default: true,
-        })
-        .select()
-        .single()
-
-      if (!newAddress) return NextResponse.json({ received: true })
-
-      const { data: newSubscription } = await supabase
-        .from('subscriptions')
-        .insert({
-          customer_id: newCustomer.id,
-          tier: 'bread_only',
-          status: 'active',
-          price_cents: 7800,
-          stripe_subscription_id: session.subscription as string,
-          delivery_address_id: newAddress.id,
+        // Store customer in Supabase
+        await supabase.from('customers').upsert({
+          stripe_customer_id: session.customer as string,
+          email: customerEmail,
+          name: customer.name,
           delivery_day: deliveryDay,
-        })
-        .select()
-        .single()
+          delivery_address: deliveryAddress,
+        });
 
-      console.log('SUCCESS: Created subscription', newSubscription?.id)
+        // Determine if subscription or one-time purchase
+        if (session.mode === 'subscription') {
+          // Subscription - send welcome email
+          const portalSession = await stripe.billingPortal.sessions.create({
+            customer: session.customer as string,
+            return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
+          });
+
+          if (customerEmail) {
+            await sendSubscriptionWelcome({
+              to: customerEmail,
+              customerName,
+              deliveryDay,
+              deliveryDate,
+              portalUrl: portalSession.url,
+            });
+          }
+        } else {
+          // One-time purchase - send order confirmation
+          if (customerEmail) {
+            await sendOrderConfirmation({
+              to: customerEmail,
+              customerName,
+              deliveryDay,
+              deliveryDate,
+              deliveryAddress,
+              orderNumber: `LS-${new Date().getFullYear()}-${session.id.slice(-6).toUpperCase()}`,
+            });
+          }
+        }
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice;
+        const customer = await stripe.customers.retrieve(invoice.customer as string) as Stripe.Customer;
+        
+        const portalSession = await stripe.billingPortal.sessions.create({
+          customer: invoice.customer as string,
+          return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
+        });
+
+        if (customer.email) {
+          await sendPaymentFailed({
+            to: customer.email,
+            customerName: customer.name?.split(' ')[0],
+            portalUrl: portalSession.url,
+          });
+        }
+        break;
+      }
+
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object as Stripe.Subscription;
+        
+        // Check if subscription was paused
+        if (subscription.pause_collection) {
+          const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
+          
+          const portalSession = await stripe.billingPortal.sessions.create({
+            customer: subscription.customer as string,
+            return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
+          });
+
+          if (customer.email) {
+            await sendSubscriptionPaused({
+              to: customer.email,
+              customerName: customer.name?.split(' ')[0],
+              portalUrl: portalSession.url,
+            });
+          }
+        }
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as Stripe.Subscription;
+        const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
+        
+        const portalSession = await stripe.billingPortal.sessions.create({
+          customer: subscription.customer as string,
+          return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/subscribe`,
+        });
+
+        if (customer.email) {
+          await sendSubscriptionCancelled({
+            to: customer.email,
+            customerName: customer.name?.split(' ')[0],
+            portalUrl: portalSession.url,
+          });
+        }
+        break;
+      }
     }
 
-    return NextResponse.json({ received: true })
+    return NextResponse.json({ received: true });
   } catch (error: any) {
-    console.error('Webhook failed:', error)
-    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+    console.error('Webhook handler error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
