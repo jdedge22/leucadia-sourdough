@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { createClient } from '@/lib/supabase/server';
+import { createServerClient } from '@/lib/supabase/server';
 import {
   sendOrderConfirmation,
   sendSubscriptionWelcome,
@@ -29,25 +29,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
 
-  const supabase = await createClient();
+  const supabase = createServerClient();
 
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         
-        // Get customer details
         const customer = await stripe.customers.retrieve(session.customer as string) as Stripe.Customer;
         const customerEmail = customer.email || session.customer_details?.email;
         const customerName = customer.name || session.customer_details?.name?.split(' ')[0];
 
-        // Get delivery details from metadata
         const deliveryDay = session.metadata?.delivery_day || 'Thursday';
         const deliveryDate = session.metadata?.delivery_date || '';
         const deliveryAddress = session.metadata?.delivery_address || 
           `${session.customer_details?.address?.line1}, ${session.customer_details?.address?.city}, ${session.customer_details?.address?.state} ${session.customer_details?.address?.postal_code}`;
 
-        // Store customer in Supabase
         await supabase.from('customers').upsert({
           stripe_customer_id: session.customer as string,
           email: customerEmail,
@@ -56,9 +53,7 @@ export async function POST(req: Request) {
           delivery_address: deliveryAddress,
         });
 
-        // Determine if subscription or one-time purchase
         if (session.mode === 'subscription') {
-          // Subscription - send welcome email
           const portalSession = await stripe.billingPortal.sessions.create({
             customer: session.customer as string,
             return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
@@ -74,7 +69,6 @@ export async function POST(req: Request) {
             });
           }
         } else {
-          // One-time purchase - send order confirmation
           if (customerEmail) {
             await sendOrderConfirmation({
               to: customerEmail,
@@ -111,7 +105,6 @@ export async function POST(req: Request) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         
-        // Check if subscription was paused
         if (subscription.pause_collection) {
           const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
           
