@@ -147,7 +147,7 @@ export default function SubscribePage() {
               className={`bg-white rounded-xl shadow-xl overflow-hidden cursor-pointer transition-all ${
                 selectedTier === 'bread' ? 'ring-4 ring-offset-2' : 'hover:shadow-2xl'
               }`}
-              style={{ ringColor: selectedTier === 'bread' ? '#5B7C99' : 'transparent' }}
+              style={selectedTier === 'bread' ? { '--tw-ring-color': '#5B7C99' } as React.CSSProperties : {}}
             >
               <div className="h-56 overflow-hidden">
                 <img
@@ -201,7 +201,7 @@ export default function SubscribePage() {
               className={`bg-white rounded-xl shadow-xl overflow-hidden cursor-pointer transition-all relative opacity-75 ${
                 selectedTier === 'bread-pastries' ? 'ring-4 ring-offset-2' : 'hover:shadow-2xl'
               }`}
-              style={{ ringColor: selectedTier === 'bread-pastries' ? '#5B7C99' : 'transparent' }}
+              style={selectedTier === 'bread-pastries' ? { '--tw-ring-color': '#5B7C99' } as React.CSSProperties : {}}
             >
               {/* COMING SOON Banner */}
               <div className="absolute top-4 left-4 right-4 z-10 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-lg text-center font-bold shadow-xl transform -rotate-1">
