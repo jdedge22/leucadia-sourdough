@@ -5,22 +5,24 @@ export default function PortalPreview() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Image */}
-      <div className="w-full h-96 relative">
+      {/* Hero Image - Full Width with better cropping */}
+      <div className="w-full h-96 relative mb-12">
         <img 
           src="/images/avocado-toast-lifestyle.jpg" 
           alt="Fresh Sourdough" 
-          className="w-full h-96 object-cover"
+          className="w-full h-96 object-cover object-center"
+          style={{ objectPosition: 'center 35%' }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-black/20"></div>
-        <div className="absolute bottom-8 left-0 right-0 text-center">
-          <h1 className="text-4xl font-bold text-white drop-shadow-lg">Customer Portal</h1>
-          <p className="text-white/90 mt-2 text-lg drop-shadow">Welcome back, {user.email}</p>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/30"></div>
+        <div className="absolute bottom-12 left-0 right-0 text-center">
+          <h1 className="text-5xl font-bold text-white drop-shadow-2xl mb-3">Customer Portal</h1>
+          <p className="text-white text-xl drop-shadow-lg">Welcome back, {user.email}</p>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 -mt-12 pb-12">
-        {/* Status Card with elevated design */}
+      {/* Content Container */}
+      <div className="max-w-4xl mx-auto px-4 pb-12">
+        {/* Status Card */}
         <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 mb-8">
           <div className="flex justify-between items-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900">Subscription Status</h2>
@@ -62,7 +64,7 @@ export default function PortalPreview() {
           </button>
         </div>
 
-        {/* Quick Actions with more depth */}
+        {/* Quick Actions */}
         <div className="grid md:grid-cols-3 gap-6">
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center hover:shadow-2xl transition-shadow">
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
