@@ -5,7 +5,7 @@ import { PaymentFailed } from '../templates/PaymentFailed';
 import { SubscriptionPaused } from '../templates/SubscriptionPaused';
 import { SubscriptionCancelled } from '../templates/SubscriptionCancelled';
 
-const FROM_EMAIL = 'Leucadia Sourdough Team <hello@send.leucadiasourdough.com>';
+const FROM_EMAIL = 'Leucadia Sourdough Team <hello@mail.leucadiasourdough.com>';
 
 export async function sendOrderConfirmation({
   to,
