@@ -1,3 +1,15 @@
+#!/bin/bash
+# Replace Resend with SendGrid in Leucadia Sourdough project
+
+echo "🔄 Replacing Resend with SendGrid..."
+
+# Step 1: Backup the original resend.ts
+echo "📦 Backing up original resend.ts..."
+cp ./emails/lib/resend.ts ./emails/lib/resend.ts.backup
+
+# Step 2: Replace resend.ts with SendGrid adapter
+echo "✏️  Replacing resend.ts with SendGrid adapter..."
+cat > ./emails/lib/resend.ts << 'INNEREOF'
 import sgMail from '@sendgrid/mail';
 import { render } from '@react-email/render';
 import { ReactElement } from 'react';
@@ -62,3 +74,20 @@ export const resend = {
     },
   },
 };
+INNEREOF
+
+# Step 3: Update sendEmail.ts to use jim@leucadiasourdough.com
+echo "📧 Updating FROM_EMAIL address..."
+sed -i.bak "s|hello@mail.leucadiasourdough.com|jim@leucadiasourdough.com|g" ./emails/lib/sendEmail.ts
+
+echo ""
+echo "✅ SendGrid replacement complete!"
+echo ""
+echo "Next steps:"
+echo "  1. Verify changes: git diff emails/lib/resend.ts"
+echo "  2. Test locally: npm run dev"
+echo "  3. Deploy: git push"
+echo ""
+echo "Backups created:"
+echo "  - ./emails/lib/resend.ts.backup"
+echo "  - ./emails/lib/sendEmail.ts.bak"
