@@ -34,6 +34,54 @@ export async function POST(req: Request) {
 
   try {
     switch (event.type) {
+      case 'customer.subscription.created': {
+        const subscription = event.data.object as Stripe.Subscription;
+        
+        // Get customer details
+        const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
+        
+        if (!customer.email) break;
+        
+        // Split name into first and last
+        const nameParts = customer.name?.split(' ') || ['', ''];
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        // Upsert customer in Supabase
+        const { error: customerError } = await supabase
+          .from('customers')
+          .upsert({
+            stripe_customer_id: customer.id,
+            email: customer.email,
+            first_name: firstName,
+            last_name: lastName,
+            phone: customer.phone || null,
+            updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'stripe_customer_id',
+          });
+
+        if (customerError) {
+          console.error('Error upserting customer:', customerError);
+        }
+
+        // Send welcome email (once DNS works)
+        const portalSession = await stripe.billingPortal.sessions.create({
+          customer: customer.id,
+          return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
+        });
+
+        await sendSubscriptionWelcome({
+          to: customer.email,
+          customerName: firstName,
+          deliveryDay: 'Thursday',
+          deliveryDate: 'TBD',
+          portalUrl: portalSession.url,
+        });
+
+        break;
+      }
+
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         
