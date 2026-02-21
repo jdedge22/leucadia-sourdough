@@ -57,8 +57,9 @@ export async function GET() {
     
     const product = price.product as Stripe.Product;
 
-    // Calculate next delivery date (assuming weekly Thursday delivery)
-    const nextBillingDate = new Date(subscription.current_period_end * 1000);
+    // Calculate next delivery date
+    const currentPeriodEnd = subscription.current_period_end;
+    const nextBillingDate = new Date(currentPeriodEnd * 1000);
     const deliveryDay = 'Thursday'; // TODO: Get from customer preferences
     
     return NextResponse.json({
@@ -68,7 +69,7 @@ export async function GET() {
         id: subscription.id,
         status: subscription.status,
         cancelAtPeriodEnd: subscription.cancel_at_period_end,
-        currentPeriodEnd: subscription.current_period_end,
+        currentPeriodEnd: currentPeriodEnd,
         nextBillingDate: nextBillingDate.toISOString(),
         plan: {
           name: product.name,
