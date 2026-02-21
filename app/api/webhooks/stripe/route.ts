@@ -37,23 +37,41 @@ export async function POST(req: Request) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         
+        // Get customer details
         const customer = await stripe.customers.retrieve(session.customer as string) as Stripe.Customer;
         const customerEmail = customer.email || session.customer_details?.email;
-        const customerName = customer.name || session.customer_details?.name?.split(' ')[0];
+        const customerName = customer.name || session.customer_details?.name;
+        
+        // Split name into first and last
+        const nameParts = customerName?.split(' ') || ['', ''];
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
 
+        // Get delivery details from metadata
         const deliveryDay = session.metadata?.delivery_day || 'Thursday';
         const deliveryDate = session.metadata?.delivery_date || '';
         const deliveryAddress = session.metadata?.delivery_address || 
           `${session.customer_details?.address?.line1}, ${session.customer_details?.address?.city}, ${session.customer_details?.address?.state} ${session.customer_details?.address?.postal_code}`;
 
-        await supabase.from('customers').upsert({
-          stripe_customer_id: session.customer as string,
-          email: customerEmail,
-          name: customer.name,
-          delivery_day: deliveryDay,
-          delivery_address: deliveryAddress,
-        });
+        // Upsert customer in Supabase
+        const { error: customerError } = await supabase
+          .from('customers')
+          .upsert({
+            stripe_customer_id: session.customer as string,
+            email: customerEmail!,
+            first_name: firstName,
+            last_name: lastName,
+            phone: session.customer_details?.phone || null,
+            updated_at: new Date().toISOString(),
+          }, {
+            onConflict: 'stripe_customer_id',
+          });
 
+        if (customerError) {
+          console.error('Error upserting customer:', customerError);
+        }
+
+        // Send appropriate email
         if (session.mode === 'subscription') {
           const portalSession = await stripe.billingPortal.sessions.create({
             customer: session.customer as string,
@@ -63,22 +81,49 @@ export async function POST(req: Request) {
           if (customerEmail) {
             await sendSubscriptionWelcome({
               to: customerEmail,
-              customerName,
+              customerName: firstName,
               deliveryDay,
               deliveryDate,
               portalUrl: portalSession.url,
             });
           }
         } else {
+          // One-time purchase
           if (customerEmail) {
             await sendOrderConfirmation({
               to: customerEmail,
-              customerName,
+              customerName: firstName,
               deliveryDay,
               deliveryDate,
               deliveryAddress,
               orderNumber: `LS-${new Date().getFullYear()}-${session.id.slice(-6).toUpperCase()}`,
             });
+          }
+        }
+        break;
+      }
+
+      case 'customer.updated': {
+        const customer = event.data.object as Stripe.Customer;
+        
+        if (customer.email) {
+          const nameParts = customer.name?.split(' ') || ['', ''];
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ') || '';
+
+          const { error } = await supabase
+            .from('customers')
+            .update({
+              email: customer.email,
+              first_name: firstName,
+              last_name: lastName,
+              phone: customer.phone || null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('stripe_customer_id', customer.id);
+
+          if (error) {
+            console.error('Error updating customer:', error);
           }
         }
         break;
@@ -94,9 +139,10 @@ export async function POST(req: Request) {
         });
 
         if (customer.email) {
+          const nameParts = customer.name?.split(' ') || ['', ''];
           await sendPaymentFailed({
             to: customer.email,
-            customerName: customer.name?.split(' ')[0],
+            customerName: nameParts[0],
             portalUrl: portalSession.url,
           });
         }
@@ -115,9 +161,10 @@ export async function POST(req: Request) {
           });
 
           if (customer.email) {
+            const nameParts = customer.name?.split(' ') || ['', ''];
             await sendSubscriptionPaused({
               to: customer.email,
-              customerName: customer.name?.split(' ')[0],
+              customerName: nameParts[0],
               portalUrl: portalSession.url,
             });
           }
@@ -135,9 +182,10 @@ export async function POST(req: Request) {
         });
 
         if (customer.email) {
+          const nameParts = customer.name?.split(' ') || ['', ''];
           await sendSubscriptionCancelled({
             to: customer.email,
-            customerName: customer.name?.split(' ')[0],
+            customerName: nameParts[0],
             portalUrl: portalSession.url,
           });
         }
