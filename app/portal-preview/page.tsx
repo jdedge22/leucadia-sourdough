@@ -1,11 +1,19 @@
 'use client';
 
+import { useState } from 'react';
+
 export default function PortalPreview() {
+  const [portalLoading, setPortalLoading] = useState(false);
   const user = { email: 'jim@leucadiasourdough.com' };
+
+  async function testPortalButton() {
+    setPortalLoading(true);
+    alert('Portal button clicked! In production, this would open Stripe Customer Portal.');
+    setPortalLoading(false);
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Hero Image - Full Width with better cropping */}
       <div className="w-full h-96 relative mb-12">
         <img 
           src="/images/avocado-toast-lifestyle.jpg" 
@@ -20,9 +28,7 @@ export default function PortalPreview() {
         </div>
       </div>
 
-      {/* Content Container */}
       <div className="max-w-4xl mx-auto px-4 pb-12">
-        {/* Status Card */}
         <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 mb-8">
           <div className="flex justify-between items-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900">Subscription Status</h2>
@@ -57,14 +63,15 @@ export default function PortalPreview() {
           </div>
 
           <button
+            onClick={testPortalButton}
+            disabled={portalLoading}
             style={{ backgroundColor: '#5B7C99' }}
-            className="w-full mt-8 text-white py-4 px-6 rounded-xl font-semibold hover:opacity-90 shadow-lg hover:shadow-xl transition-all"
+            className="w-full mt-8 text-white py-4 px-6 rounded-xl font-semibold hover:opacity-90 shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
           >
-            Manage Subscription & Payment
+            {portalLoading ? 'Opening...' : 'Test Portal Button'}
           </button>
         </div>
 
-        {/* Quick Actions */}
         <div className="grid md:grid-cols-3 gap-6">
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center hover:shadow-2xl transition-shadow">
             <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
