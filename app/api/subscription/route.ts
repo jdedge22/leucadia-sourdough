@@ -47,10 +47,10 @@ export async function GET() {
       });
     }
 
-    const subscription = subscriptions.data[0];
+    const sub = subscriptions.data[0] as any; // Cast to any to access properties
     
     // Get product details
-    const priceId = subscription.items.data[0].price.id;
+    const priceId = sub.items.data[0].price.id;
     const price = await stripe.prices.retrieve(priceId, {
       expand: ['product'],
     });
@@ -58,18 +58,17 @@ export async function GET() {
     const product = price.product as Stripe.Product;
 
     // Calculate next delivery date
-    const currentPeriodEnd = subscription.current_period_end;
-    const nextBillingDate = new Date(currentPeriodEnd * 1000);
+    const nextBillingDate = new Date(sub.current_period_end * 1000);
     const deliveryDay = 'Thursday'; // TODO: Get from customer preferences
     
     return NextResponse.json({
       hasSubscription: true,
       customer,
       subscription: {
-        id: subscription.id,
-        status: subscription.status,
-        cancelAtPeriodEnd: subscription.cancel_at_period_end,
-        currentPeriodEnd: currentPeriodEnd,
+        id: sub.id,
+        status: sub.status,
+        cancelAtPeriodEnd: sub.cancel_at_period_end,
+        currentPeriodEnd: sub.current_period_end,
         nextBillingDate: nextBillingDate.toISOString(),
         plan: {
           name: product.name,
@@ -77,7 +76,7 @@ export async function GET() {
           interval: price.recurring?.interval || 'month',
         },
         deliveryDay,
-        isPaused: subscription.pause_collection !== null,
+        isPaused: sub.pause_collection !== null,
       },
     });
   } catch (error: any) {
