@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createServerClient } from '@/lib/supabase/server'
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import {
   STRIPE_PRICE_ID_ONE_LOAF,
   STRIPE_PRICE_ID_TWO_LOAF,
@@ -50,6 +50,7 @@ function getNextDeliveryDate(deliveryDay: string): string {
 export async function GET() {
   try {
     const supabase = await createServerClient()
+    const supabaseAdmin = createServiceRoleClient()
 
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -57,7 +58,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const { data: customer } = await supabase
+    const { data: customer } = await supabaseAdmin
       .from('customers')
       .select('stripe_customer_id, first_name, last_name, bread_selections')
       .eq('email', user.email)

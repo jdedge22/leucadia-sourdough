@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { createServerClient } from '@/lib/supabase/server'
+import { createServerClient, createServiceRoleClient } from '@/lib/supabase/server'
 import {
   STRIPE_PRICE_ID_ONE_LOAF,
   STRIPE_PRICE_ID_TWO_LOAF,
@@ -17,6 +17,7 @@ const VALID_VARIETIES = ['original', 'everything', 'jalapeno']
 export async function POST(req: Request) {
   try {
     const supabase = await createServerClient()
+    const supabaseAdmin = createServiceRoleClient()
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
     const total = Object.values(selections).reduce((sum: number, n) => sum + (n as number), 0)
 
     // Get customer
-    const { data: customer } = await supabase
+    const { data: customer } = await supabaseAdmin
       .from('customers')
       .select('stripe_customer_id')
       .eq('email', user.email)
@@ -89,7 +90,7 @@ export async function POST(req: Request) {
     }
 
     // Update Supabase
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('customers')
       .update({ bread_selections: selections })
       .eq('stripe_customer_id', customer.stripe_customer_id)
