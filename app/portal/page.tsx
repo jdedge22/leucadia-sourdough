@@ -189,6 +189,11 @@ function PortalPage() {
     ? `${data.customer.firstName}`
     : user?.email
 
+  // Detect first-time wholesale: all loaves defaulted to original
+  const isFirstTimeSetup = isWholesale && sub?.breadSelections && !editingVarieties &&
+    Object.keys(sub.breadSelections).length === 1 &&
+    sub.breadSelections.original === sub.loafCount
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Image */}
@@ -207,6 +212,23 @@ function PortalPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 pb-12">
+        {/* First-time wholesale setup banner */}
+        {isFirstTimeSetup && (
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-8 mb-8 text-center">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome! Choose Your Bread Varieties</h2>
+            <p className="text-gray-600 mb-6">
+              Your {sub?.loafCount} loaves are currently set to all Original. Use the editor below to pick your mix of varieties.
+            </p>
+            <button
+              onClick={startEditingVarieties}
+              className="text-white py-3 px-8 rounded-xl font-semibold hover:opacity-90 transition-all"
+              style={{ backgroundColor: '#d97706' }}
+            >
+              Choose My Varieties
+            </button>
+          </div>
+        )}
+
         {!data?.hasSubscription ? (
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 text-center">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">No Active Subscription</h2>
