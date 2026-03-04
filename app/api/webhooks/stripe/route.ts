@@ -20,6 +20,12 @@ async function generatePortalLink(email: string): Promise<string> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!;
 
   try {
+    // Ensure auth user exists (ignore error if already exists)
+    await supabaseAdmin.auth.admin.createUser({
+      email,
+      email_confirm: true,
+    });
+
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email,
@@ -33,10 +39,8 @@ async function generatePortalLink(email: string): Promise<string> {
       return `${baseUrl}/portal`;
     }
 
-    // Replace the Supabase redirect with our callback
-    const url = new URL(data.properties.action_link);
-    url.searchParams.set('redirect_to', `${baseUrl}/auth/callback`);
-    return url.toString();
+    console.log('Generated portal link for:', email);
+    return data.properties.action_link;
   } catch (err) {
     console.error('Magic link generation error:', err);
     return `${baseUrl}/portal`;
