@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server'
-import { stripe, STRIPE_PRICE_ID_ONE_LOAF, STRIPE_PRICE_ID_TWO_LOAF } from '@/lib/stripe/server'
+import {
+  stripe,
+  STRIPE_PRICE_ID_ONE_LOAF,
+  STRIPE_PRICE_ID_TWO_LOAF,
+  STRIPE_PRICE_ID_RESTAURANT,
+  STRIPE_PRICE_ID_GROCERY,
+} from '@/lib/stripe/server'
 import { createServerClient } from '@/lib/supabase/server'
 
 const VARIETIES = ['original', 'everything', 'jalapeno'] as const
@@ -77,7 +83,7 @@ export async function GET() {
       .select('stripe_customer_id, bread_selections')
       .in('stripe_customer_id', customerIds)
 
-    const selectionsMap = new Map<string, string[]>()
+    const selectionsMap = new Map<string, string[] | Record<string, number>>()
     for (const row of customerRows || []) {
       if (row.bread_selections) {
         selectionsMap.set(row.stripe_customer_id, row.bread_selections)
@@ -99,38 +105,59 @@ export async function GET() {
         metadata?: Record<string, string>
       }
       const priceId = sub.items.data[0]?.price?.id
-      const loafCount =
-        priceId === STRIPE_PRICE_ID_TWO_LOAF ? 2 : 1
+      const quantity = sub.items.data[0]?.quantity || 1
+      let loafCount: number
+      if (priceId === STRIPE_PRICE_ID_ONE_LOAF) {
+        loafCount = 1
+      } else if (priceId === STRIPE_PRICE_ID_TWO_LOAF) {
+        loafCount = 2
+      } else if (priceId === STRIPE_PRICE_ID_RESTAURANT || priceId === STRIPE_PRICE_ID_GROCERY) {
+        loafCount = quantity
+      } else {
+        loafCount = 1
+      }
 
       const day = normalizeDay(customer.metadata?.delivery_day)
 
       // Resolve bread selections: Supabase → Stripe metadata → default
-      let selections: string[] | null = selectionsMap.get(customer.id) || null
+      let rawSelections = selectionsMap.get(customer.id) || null
 
-      if (!selections && customer.metadata?.bread_selections) {
+      if (!rawSelections && customer.metadata?.bread_selections) {
         try {
-          selections = JSON.parse(customer.metadata.bread_selections)
+          rawSelections = JSON.parse(customer.metadata.bread_selections)
         } catch {
-          selections = null
+          rawSelections = null
         }
       }
 
-      // Default: fill with "original" up to loaf count
-      if (!selections || selections.length === 0) {
-        selections = Array(loafCount).fill('original')
-      }
+      // Handle object format { original: 10, everything: 5 } or array format ["original", "everything"]
+      if (rawSelections && !Array.isArray(rawSelections) && typeof rawSelections === 'object') {
+        for (const [variety, count] of Object.entries(rawSelections)) {
+          const v = (VARIETIES.includes(variety as Variety) ? variety : 'original') as Variety
+          breakdown[day][v] += count as number
+        }
+        // Check if object total covers all loaves, fill remainder with original
+        const objectTotal = Object.values(rawSelections).reduce((s: number, n) => s + (n as number), 0)
+        if (objectTotal < loafCount) {
+          breakdown[day].original += loafCount - objectTotal
+        }
+      } else {
+        // Array format or default
+        let selections: string[] = Array.isArray(rawSelections) && rawSelections.length > 0
+          ? rawSelections as string[]
+          : Array(loafCount).fill('original')
 
-      // Ensure selections match loaf count
-      while (selections.length < loafCount) {
-        selections.push(selections[0] || 'original')
-      }
+        while (selections.length < loafCount) {
+          selections.push(selections[0] || 'original')
+        }
 
-      for (let i = 0; i < loafCount; i++) {
-        const variety = (selections[i] || 'original') as Variety
-        if (VARIETIES.includes(variety)) {
-          breakdown[day][variety]++
-        } else {
-          breakdown[day].original++
+        for (let i = 0; i < loafCount; i++) {
+          const variety = (selections[i] || 'original') as Variety
+          if (VARIETIES.includes(variety)) {
+            breakdown[day][variety]++
+          } else {
+            breakdown[day].original++
+          }
         }
       }
 

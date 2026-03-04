@@ -7,3 +7,5 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export const STRIPE_PRICE_ID_ONE_LOAF = process.env.STRIPE_PRICE_ID_ONE_LOAF!
 export const STRIPE_PRICE_ID_TWO_LOAF = process.env.STRIPE_PRICE_ID_TWO_LOAF!
+export const STRIPE_PRICE_ID_RESTAURANT = process.env.STRIPE_PRICE_ID_RESTAURANT!
+export const STRIPE_PRICE_ID_GROCERY = process.env.STRIPE_PRICE_ID_GROCERY!
