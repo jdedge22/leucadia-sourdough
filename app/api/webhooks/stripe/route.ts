@@ -5,6 +5,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 import {
   sendOrderConfirmation,
   sendSubscriptionWelcome,
+  sendWholesaleWelcome,
   sendPaymentFailed,
   sendSubscriptionPaused,
   sendSubscriptionCancelled,
@@ -49,7 +50,11 @@ export async function POST(req: Request) {
 
         // Determine plan from price ID
         const priceId = subscription.items.data[0]?.price?.id;
-        const plan = priceId === process.env.STRIPE_PRICE_ID_ONE_LOAF ? 'one-loaf' : 'two-loaf';
+        const quantity = subscription.items.data[0]?.quantity || 1;
+        const isRestaurant = priceId === process.env.STRIPE_PRICE_ID_RESTAURANT;
+        const isGrocery = priceId === process.env.STRIPE_PRICE_ID_GROCERY;
+        const isWholesale = isRestaurant || isGrocery;
+
         const deliveryDay = customer.metadata?.delivery_day || 'Thursday';
         const breadSelections = customer.metadata?.bread_selections
           ? JSON.parse(customer.metadata.bread_selections)
@@ -80,15 +85,33 @@ export async function POST(req: Request) {
           return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
         });
 
-        await sendSubscriptionWelcome({
-          to: customer.email,
-          customerName: firstName,
-          deliveryDay,
-          deliveryDate: '',
-          portalUrl: portalSession.url,
-          plan: plan as 'one-loaf' | 'two-loaf',
-          breadSelections,
-        });
+        if (isWholesale) {
+          const partnerType = isRestaurant ? 'restaurant' : 'grocery';
+          const perLoafRate = isRestaurant ? '$5.00' : '$4.50';
+
+          await sendWholesaleWelcome({
+            to: customer.email,
+            customerName: firstName,
+            businessName: customer.metadata?.business_name,
+            partnerType,
+            loafCount: quantity,
+            perLoafRate,
+            deliveryDay,
+            portalUrl: portalSession.url,
+          });
+        } else {
+          const plan = priceId === process.env.STRIPE_PRICE_ID_ONE_LOAF ? 'one-loaf' : 'two-loaf';
+
+          await sendSubscriptionWelcome({
+            to: customer.email,
+            customerName: firstName,
+            deliveryDay,
+            deliveryDate: '',
+            portalUrl: portalSession.url,
+            plan: plan as 'one-loaf' | 'two-loaf',
+            breadSelections,
+          });
+        }
 
         break;
       }

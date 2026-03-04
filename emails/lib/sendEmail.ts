@@ -1,6 +1,7 @@
 import { resend } from './resend';
 import { OrderConfirmation } from '../templates/OrderConfirmation';
 import { SubscriptionWelcome } from '../templates/SubscriptionWelcome';
+import { WholesaleWelcome } from '../templates/WholesaleWelcome';
 import { PaymentFailed } from '../templates/PaymentFailed';
 import { SubscriptionPaused } from '../templates/SubscriptionPaused';
 import { SubscriptionCancelled } from '../templates/SubscriptionCancelled';
@@ -64,6 +65,41 @@ export async function sendSubscriptionWelcome({
       portalUrl,
       plan,
       breadSelections,
+    }),
+  });
+}
+
+export async function sendWholesaleWelcome({
+  to,
+  customerName,
+  businessName,
+  partnerType,
+  loafCount,
+  perLoafRate,
+  deliveryDay,
+  portalUrl,
+}: {
+  to: string;
+  customerName?: string;
+  businessName?: string;
+  partnerType: 'restaurant' | 'grocery';
+  loafCount: number;
+  perLoafRate: string;
+  deliveryDay: string;
+  portalUrl: string;
+}) {
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `Welcome to Leucadia Sourdough — ${partnerType === 'restaurant' ? 'Restaurant' : 'Grocery'} Partner`,
+    react: WholesaleWelcome({
+      customerName,
+      businessName,
+      partnerType,
+      loafCount,
+      perLoafRate,
+      deliveryDay,
+      portalUrl,
     }),
   });
 }

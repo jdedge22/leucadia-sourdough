@@ -28,7 +28,7 @@ function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-const MOCK_DATA: SubscriptionData = {
+const MOCK_RETAIL: SubscriptionData = {
   hasSubscription: true,
   customer: { firstName: 'Jim', lastName: 'Demo' },
   subscription: {
@@ -40,6 +40,24 @@ const MOCK_DATA: SubscriptionData = {
     loafCount: 2,
     breadSelections: { original: 1, everything: 1 },
     plan: { name: '2 Loaves/Week', amount: 14, interval: 'week' },
+    deliveryDay: 'Thursday',
+    nextDelivery: 'Thursday, March 5, 2026',
+    isPaused: false,
+  },
+}
+
+const MOCK_WHOLESALE: SubscriptionData = {
+  hasSubscription: true,
+  customer: { firstName: 'Jim', lastName: 'Board & Brew' },
+  subscription: {
+    id: 'preview',
+    status: 'active',
+    cancelAtPeriodEnd: false,
+    customerType: 'restaurant',
+    isWholesale: true,
+    loafCount: 20,
+    breadSelections: { original: 10, everything: 5, jalapeno: 5 },
+    plan: { name: 'Restaurant Wholesale', amount: 5, interval: 'month' },
     deliveryDay: 'Thursday',
     nextDelivery: 'Thursday, March 5, 2026',
     isPaused: false,
@@ -75,10 +93,10 @@ function PortalPage() {
   )
 
   useEffect(() => {
-    const preview = searchParams.get('preview') !== null
-    if (preview) {
+    const preview = searchParams.get('preview')
+    if (preview !== null) {
       setUser({ email: 'preview@example.com' })
-      setData(MOCK_DATA)
+      setData(preview === 'wholesale' ? MOCK_WHOLESALE : MOCK_RETAIL)
       setLoading(false)
     } else {
       checkUser()
