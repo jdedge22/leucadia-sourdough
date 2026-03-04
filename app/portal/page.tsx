@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 type SubscriptionData = {
   hasSubscription: boolean
@@ -28,7 +28,37 @@ function capitalize(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-export default function PortalPage() {
+const MOCK_DATA: SubscriptionData = {
+  hasSubscription: true,
+  customer: { firstName: 'Jim', lastName: 'Demo' },
+  subscription: {
+    id: 'preview',
+    status: 'active',
+    cancelAtPeriodEnd: false,
+    customerType: 'retail-2',
+    isWholesale: false,
+    loafCount: 2,
+    breadSelections: { original: 1, everything: 1 },
+    plan: { name: '2 Loaves/Week', amount: 14, interval: 'week' },
+    deliveryDay: 'Thursday',
+    nextDelivery: 'Thursday, March 5, 2026',
+    isPaused: false,
+  },
+}
+
+export default function PortalPageWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-xl text-gray-600">Loading...</div>
+      </div>
+    }>
+      <PortalPage />
+    </Suspense>
+  )
+}
+
+function PortalPage() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState<SubscriptionData | null>(null)
@@ -37,6 +67,7 @@ export default function PortalPage() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,8 +75,15 @@ export default function PortalPage() {
   )
 
   useEffect(() => {
-    checkUser()
-  }, [])
+    const preview = searchParams.get('preview') !== null
+    if (preview) {
+      setUser({ email: 'preview@example.com' })
+      setData(MOCK_DATA)
+      setLoading(false)
+    } else {
+      checkUser()
+    }
+  }, [searchParams])
 
   async function checkUser() {
     const { data: { user } } = await supabase.auth.getUser()

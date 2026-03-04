@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     const priceId = plan === 'one-loaf' ? STRIPE_PRICE_ID_ONE_LOAF : STRIPE_PRICE_ID_TWO_LOAF
 
-    const supabase = createServerClient()
+    const supabase = await createServerClient()
 
     let customer = await supabase
       .from('customers')

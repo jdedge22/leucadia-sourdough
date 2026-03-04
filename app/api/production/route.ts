@@ -6,7 +6,7 @@ import {
   STRIPE_PRICE_ID_RESTAURANT,
   STRIPE_PRICE_ID_GROCERY,
 } from '@/lib/stripe/server'
-import { createServerClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 
 const VARIETIES = ['original', 'everything', 'jalapeno'] as const
 type Variety = (typeof VARIETIES)[number]
@@ -77,7 +77,7 @@ export async function GET() {
       return customer.id
     })
 
-    const supabase = createServerClient()
+    const supabase = createServiceRoleClient()
     const { data: customerRows } = await supabase
       .from('customers')
       .select('stripe_customer_id, bread_selections')

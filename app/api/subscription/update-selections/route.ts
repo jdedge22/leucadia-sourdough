@@ -14,7 +14,7 @@ const VALID_VARIETIES = ['original', 'everything', 'jalapeno']
 
 export async function POST(req: Request) {
   try {
-    const supabase = createServerClient()
+    const supabase = await createServerClient()
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
