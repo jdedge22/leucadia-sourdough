@@ -86,11 +86,20 @@ export async function POST(req: Request) {
         // Send welcome email
         const portalUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/portal`;
 
+        console.log('Sending welcome email:', {
+          to: customer.email,
+          isWholesale,
+          priceId,
+          quantity,
+          portalUrl,
+        });
+
+        let emailResult;
         if (isWholesale) {
           const partnerType = isRestaurant ? 'restaurant' : 'grocery';
           const perLoafRate = isRestaurant ? '$5.00' : '$4.50';
 
-          await sendWholesaleWelcome({
+          emailResult = await sendWholesaleWelcome({
             to: customer.email,
             customerName: firstName,
             businessName: customer.metadata?.business_name,
@@ -103,7 +112,7 @@ export async function POST(req: Request) {
         } else {
           const plan = priceId === process.env.STRIPE_PRICE_ID_ONE_LOAF ? 'one-loaf' : 'two-loaf';
 
-          await sendSubscriptionWelcome({
+          emailResult = await sendSubscriptionWelcome({
             to: customer.email,
             customerName: firstName,
             deliveryDay,
@@ -113,6 +122,8 @@ export async function POST(req: Request) {
             breadSelections,
           });
         }
+
+        console.log('Email result:', JSON.stringify(emailResult));
 
         break;
       }
