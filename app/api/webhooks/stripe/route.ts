@@ -84,10 +84,7 @@ export async function POST(req: Request) {
         }
 
         // Send welcome email
-        const portalSession = await stripe.billingPortal.sessions.create({
-          customer: customer.id,
-          return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
-        });
+        const portalUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/portal`;
 
         if (isWholesale) {
           const partnerType = isRestaurant ? 'restaurant' : 'grocery';
@@ -101,7 +98,7 @@ export async function POST(req: Request) {
             loafCount: quantity,
             perLoafRate,
             deliveryDay,
-            portalUrl: portalSession.url,
+            portalUrl,
           });
         } else {
           const plan = priceId === process.env.STRIPE_PRICE_ID_ONE_LOAF ? 'one-loaf' : 'two-loaf';
@@ -111,7 +108,7 @@ export async function POST(req: Request) {
             customerName: firstName,
             deliveryDay,
             deliveryDate: '',
-            portalUrl: portalSession.url,
+            portalUrl,
             plan: plan as 'one-loaf' | 'two-loaf',
             breadSelections,
           });
@@ -163,11 +160,7 @@ export async function POST(req: Request) {
 
         // Send appropriate email
         if (session.mode === 'subscription') {
-          const portalSession = await stripe.billingPortal.sessions.create({
-            customer: session.customer as string,
-            return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
-          });
-
+          const portalUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/portal`;
           const plan = session.metadata?.plan as 'one-loaf' | 'two-loaf' | undefined;
 
           if (customerEmail) {
@@ -176,7 +169,7 @@ export async function POST(req: Request) {
               customerName: firstName,
               deliveryDay,
               deliveryDate,
-              portalUrl: portalSession.url,
+              portalUrl,
               plan,
               breadSelections,
             });
@@ -226,18 +219,13 @@ export async function POST(req: Request) {
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
         const customer = await stripe.customers.retrieve(invoice.customer as string) as Stripe.Customer;
-        
-        const portalSession = await stripe.billingPortal.sessions.create({
-          customer: invoice.customer as string,
-          return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
-        });
 
         if (customer.email) {
           const nameParts = customer.name?.split(' ') || ['', ''];
           await sendPaymentFailed({
             to: customer.email,
             customerName: nameParts[0],
-            portalUrl: portalSession.url,
+            portalUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
           });
         }
         break;
@@ -245,21 +233,16 @@ export async function POST(req: Request) {
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
-        
+
         if (subscription.pause_collection) {
           const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
-          
-          const portalSession = await stripe.billingPortal.sessions.create({
-            customer: subscription.customer as string,
-            return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
-          });
 
           if (customer.email) {
             const nameParts = customer.name?.split(' ') || ['', ''];
             await sendSubscriptionPaused({
               to: customer.email,
               customerName: nameParts[0],
-              portalUrl: portalSession.url,
+              portalUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
             });
           }
         }
@@ -269,18 +252,13 @@ export async function POST(req: Request) {
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
         const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
-        
-        const portalSession = await stripe.billingPortal.sessions.create({
-          customer: subscription.customer as string,
-          return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/subscribe`,
-        });
 
         if (customer.email) {
           const nameParts = customer.name?.split(' ') || ['', ''];
           await sendSubscriptionCancelled({
             to: customer.email,
             customerName: nameParts[0],
-            portalUrl: portalSession.url,
+            portalUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
           });
         }
         break;

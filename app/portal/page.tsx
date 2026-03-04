@@ -128,12 +128,8 @@ function PortalPage() {
     router.push('/')
   }
 
-  async function handleManageSubscription() {
-    const res = await fetch('/api/create-portal-session', { method: 'POST' })
-    if (res.ok) {
-      const { url } = await res.json()
-      window.location.href = url
-    }
+  function handleContactUs() {
+    window.location.href = 'mailto:hello@leucadiasourdough.com?subject=Subscription Help'
   }
 
   function startEditingVarieties() {
@@ -393,11 +389,11 @@ function PortalPage() {
               )}
 
               <button
-                onClick={handleManageSubscription}
+                onClick={handleContactUs}
                 style={{ backgroundColor: '#5B7C99' }}
                 className="w-full mt-8 text-white py-4 px-6 rounded-xl font-semibold hover:opacity-90 shadow-lg hover:shadow-xl transition-all"
               >
-                Manage Subscription & Payment
+                Need Help? Contact Us
               </button>
             </div>
 
