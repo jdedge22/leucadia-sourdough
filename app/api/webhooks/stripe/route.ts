@@ -51,6 +51,9 @@ export async function POST(req: Request) {
         const priceId = subscription.items.data[0]?.price?.id;
         const plan = priceId === process.env.STRIPE_PRICE_ID_ONE_LOAF ? 'one-loaf' : 'two-loaf';
         const deliveryDay = customer.metadata?.delivery_day || 'Thursday';
+        const breadSelections = customer.metadata?.bread_selections
+          ? JSON.parse(customer.metadata.bread_selections)
+          : [];
 
         // Upsert customer in Supabase
         const { error: customerError } = await supabase
@@ -61,6 +64,7 @@ export async function POST(req: Request) {
             first_name: firstName,
             last_name: lastName,
             phone: customer.phone || null,
+            bread_selections: breadSelections.length > 0 ? breadSelections : null,
             updated_at: new Date().toISOString(),
           }, {
             onConflict: 'stripe_customer_id',
@@ -83,6 +87,7 @@ export async function POST(req: Request) {
           deliveryDate: '',
           portalUrl: portalSession.url,
           plan: plan as 'one-loaf' | 'two-loaf',
+          breadSelections,
         });
 
         break;
@@ -104,7 +109,10 @@ export async function POST(req: Request) {
         // Get delivery details from metadata
         const deliveryDay = session.metadata?.delivery_day || 'Thursday';
         const deliveryDate = session.metadata?.delivery_date || '';
-        const deliveryAddress = session.metadata?.delivery_address || 
+        const breadSelections = session.metadata?.bread_selections
+          ? JSON.parse(session.metadata.bread_selections)
+          : [];
+        const deliveryAddress = session.metadata?.delivery_address ||
           `${session.customer_details?.address?.line1}, ${session.customer_details?.address?.city}, ${session.customer_details?.address?.state} ${session.customer_details?.address?.postal_code}`;
 
         // Upsert customer in Supabase
@@ -116,6 +124,7 @@ export async function POST(req: Request) {
             first_name: firstName,
             last_name: lastName,
             phone: session.customer_details?.phone || null,
+            bread_selections: breadSelections.length > 0 ? breadSelections : null,
             updated_at: new Date().toISOString(),
           }, {
             onConflict: 'stripe_customer_id',
@@ -142,6 +151,7 @@ export async function POST(req: Request) {
               deliveryDate,
               portalUrl: portalSession.url,
               plan,
+              breadSelections,
             });
           }
         } else {

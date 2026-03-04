@@ -43,6 +43,7 @@ export async function sendSubscriptionWelcome({
   deliveryDate,
   portalUrl,
   plan,
+  breadSelections,
 }: {
   to: string;
   customerName?: string;
@@ -50,6 +51,7 @@ export async function sendSubscriptionWelcome({
   deliveryDate: string;
   portalUrl: string;
   plan?: 'one-loaf' | 'two-loaf';
+  breadSelections?: string[];
 }) {
   return resend.emails.send({
     from: FROM_EMAIL,
@@ -61,6 +63,7 @@ export async function sendSubscriptionWelcome({
       deliveryDate,
       portalUrl,
       plan,
+      breadSelections,
     }),
   });
 }

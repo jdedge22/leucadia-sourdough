@@ -3,10 +3,32 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+const breads = [
+  {
+    id: 'original',
+    name: 'Original Leucadia Sourdough',
+    image: 'https://leucadiasourdough.com/cdn/shop/files/lucid-origin_Artisan_sourdough_bread_boule_on_rustic_wooden_cutting_board_golden-brown_crust_-0.jpg?v=1768347084&width=800',
+    description: 'Our signature fresh-milled organic sourdough.',
+  },
+  {
+    id: 'everything',
+    name: 'Everything Bagel',
+    image: 'https://leucadiasourdough.com/cdn/shop/files/using-the-photos-selected-as-guidance-please-create-everything-bagel-sourdough.png?v=1768332745&width=800',
+    description: 'Fresh-milled sourdough with everything bagel seasoning.',
+  },
+  {
+    id: 'jalapeno',
+    name: 'Jalapeño & Cheddar',
+    image: 'https://leucadiasourdough.com/cdn/shop/files/jalapeno-cheddar-version-of-same-bread.png?v=1768332586&width=800',
+    description: 'Spicy jalapeños and sharp cheddar.',
+  },
+]
+
 export default function SubscribePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [selectedTier, setSelectedTier] = useState<'one-loaf' | 'two-loaf'>('two-loaf')
+  const [breadSelections, setBreadSelections] = useState<string[]>([])
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -18,8 +40,16 @@ export default function SubscribePage() {
     deliveryDay: 'thursday'
   })
 
+  const requiredSelections = selectedTier === 'one-loaf' ? 1 : 2
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (breadSelections.length !== requiredSelections) {
+      alert(`Please select ${requiredSelections} bread ${requiredSelections === 1 ? 'variety' : 'varieties'} before continuing.`)
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -37,6 +67,7 @@ export default function SubscribePage() {
           deliveryDay: formData.deliveryDay,
           deliveryAddress: deliveryAddress,
           plan: selectedTier,
+          breadSelections,
         }),
       })
       const data = await response.json()
@@ -145,7 +176,7 @@ export default function SubscribePage() {
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {/* 1 Loaf/Week Tier */}
             <div
-              onClick={() => setSelectedTier('one-loaf')}
+              onClick={() => { setSelectedTier('one-loaf'); setBreadSelections([]) }}
               className={`bg-white rounded-xl shadow-xl overflow-hidden cursor-pointer transition-all ${
                 selectedTier === 'one-loaf' ? 'ring-4 ring-offset-2' : 'hover:shadow-2xl'
               }`}
@@ -200,7 +231,7 @@ export default function SubscribePage() {
 
             {/* 2 Loaves/Week Tier */}
             <div
-              onClick={() => setSelectedTier('two-loaf')}
+              onClick={() => { setSelectedTier('two-loaf'); setBreadSelections([]) }}
               className={`bg-white rounded-xl shadow-xl overflow-hidden cursor-pointer transition-all relative ${
                 selectedTier === 'two-loaf' ? 'ring-4 ring-offset-2' : 'hover:shadow-2xl'
               }`}
@@ -258,6 +289,75 @@ export default function SubscribePage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Bread Variety Picker */}
+      <section className="py-16 bg-gradient-to-b from-amber-50 to-white">
+        <div className="max-w-6xl mx-auto px-4">
+          <h2 className="text-4xl font-bold text-center mb-4 text-gray-900">Choose Your Bread</h2>
+          <p className="text-center text-gray-600 mb-12 text-lg">
+            {selectedTier === 'one-loaf'
+              ? 'Pick 1 variety for your weekly delivery'
+              : 'Pick 2 varieties for your weekly delivery (you can pick the same one twice)'}
+          </p>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+            {breads.map((bread) => {
+              const count = breadSelections.filter((s) => s === bread.id).length
+              const maxSelections = selectedTier === 'one-loaf' ? 1 : 2
+              const totalSelected = breadSelections.length
+
+              const handleClick = () => {
+                if (count > 0) {
+                  // Remove one instance of this bread
+                  const idx = breadSelections.indexOf(bread.id)
+                  setBreadSelections((prev) => prev.filter((_, i) => i !== idx))
+                } else if (totalSelected < maxSelections) {
+                  setBreadSelections((prev) => [...prev, bread.id])
+                }
+              }
+
+              return (
+                <div
+                  key={bread.id}
+                  onClick={handleClick}
+                  className={`bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer transition-all ${
+                    count > 0 ? 'ring-4 ring-offset-2' : 'hover:shadow-xl'
+                  } ${totalSelected >= maxSelections && count === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  style={count > 0 ? { '--tw-ring-color': '#5B7C99' } as React.CSSProperties : {}}
+                >
+                  <div className="h-48 overflow-hidden">
+                    <img
+                      src={bread.image}
+                      alt={bread.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="p-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-lg font-bold text-gray-900">{bread.name}</h3>
+                      {count > 0 && (
+                        <div
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                          style={{ backgroundColor: '#5B7C99' }}
+                        >
+                          {count > 1 ? count : '✓'}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-gray-600 text-sm">{bread.description}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {breadSelections.length < (selectedTier === 'one-loaf' ? 1 : 2) && (
+            <p className="text-center text-amber-600 mt-6 font-medium">
+              Please select {selectedTier === 'one-loaf' ? 1 : 2 - breadSelections.length} more {breadSelections.length === 1 ? 'variety' : (selectedTier === 'one-loaf' ? 'variety' : 'varieties')}
+            </p>
+          )}
         </div>
       </section>
 

@@ -3,12 +3,19 @@ import { Section, Text, Img } from '@react-email/components';
 import { EmailLayout } from '../components/EmailLayout';
 import { Button } from '../components/Button';
 
+const BREAD_NAMES: Record<string, string> = {
+  original: 'Original Leucadia Sourdough',
+  everything: 'Everything Bagel',
+  jalapeno: 'Jalapeño & Cheddar',
+};
+
 interface SubscriptionWelcomeProps {
   customerName?: string;
   deliveryDay: string;
   deliveryDate: string;
   portalUrl: string;
   plan?: 'one-loaf' | 'two-loaf';
+  breadSelections?: string[];
 }
 
 export const SubscriptionWelcome = ({
@@ -17,11 +24,23 @@ export const SubscriptionWelcome = ({
   deliveryDate,
   portalUrl,
   plan = 'two-loaf',
+  breadSelections = [],
 }: SubscriptionWelcomeProps) => {
   const loavesPerWeek = plan === 'one-loaf' ? '1 loaf' : '2 loaves';
   const loavesPerCycle = plan === 'one-loaf' ? '4 loaves' : '8 loaves';
   const price = plan === 'one-loaf' ? '$38' : '$68';
   const formattedDeliveryDay = deliveryDay.charAt(0).toUpperCase() + deliveryDay.slice(1);
+
+  // Format bread selections for display (e.g. "2x Original Leucadia Sourdough" or "Original Leucadia Sourdough, Everything Bagel")
+  const formatBreadSelections = () => {
+    if (!breadSelections.length) return null;
+    const counts: Record<string, number> = {};
+    breadSelections.forEach((id) => { counts[id] = (counts[id] || 0) + 1; });
+    return Object.entries(counts)
+      .map(([id, count]) => count > 1 ? `${count}x ${BREAD_NAMES[id] || id}` : (BREAD_NAMES[id] || id))
+      .join(', ');
+  };
+  const breadDisplay = formatBreadSelections();
   return (
     <EmailLayout previewText="Welcome to weekly fresh-milled sourdough!">
       {/* Hero Image */}
@@ -52,6 +71,7 @@ export const SubscriptionWelcome = ({
           <Text style={infoBoxHeading}>What You're Getting:</Text>
           <Text style={infoBoxText}>
             • {loavesPerWeek} every week ({loavesPerCycle} every 4 weeks)<br />
+            {breadDisplay && <>• Varieties: {breadDisplay}<br /></>}
             • {price} every 4 weeks<br />
             • Delivered {formattedDeliveryDay}<br />
             • Baked fresh within 24 hours of delivery

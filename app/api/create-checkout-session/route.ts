@@ -4,9 +4,9 @@ import { createServerClient } from '@/lib/supabase/server'
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, deliveryDay, deliveryAddress, plan } = await req.json()
+    const { email, deliveryDay, deliveryAddress, plan, breadSelections } = await req.json()
 
-    if (!email || !deliveryDay || !deliveryAddress || !plan) {
+    if (!email || !deliveryDay || !deliveryAddress || !plan || !breadSelections?.length) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -27,11 +27,18 @@ export async function POST(req: NextRequest) {
 
     if (customer.data?.stripe_customer_id) {
       stripeCustomerId = customer.data.stripe_customer_id
+      await stripe.customers.update(stripeCustomerId, {
+        metadata: {
+          delivery_day: deliveryDay,
+          bread_selections: JSON.stringify(breadSelections),
+        },
+      })
     } else {
       const stripeCustomer = await stripe.customers.create({
         email,
         metadata: {
           delivery_day: deliveryDay,
+          bread_selections: JSON.stringify(breadSelections),
         },
       })
       stripeCustomerId = stripeCustomer.id
@@ -53,6 +60,7 @@ export async function POST(req: NextRequest) {
         delivery_day: deliveryDay,
         delivery_address: JSON.stringify(deliveryAddress),
         plan,
+        bread_selections: JSON.stringify(breadSelections),
       },
     })
 
