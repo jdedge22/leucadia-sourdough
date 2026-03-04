@@ -15,6 +15,34 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2026-01-28.clover',
 });
 
+async function generatePortalLink(email: string): Promise<string> {
+  const supabaseAdmin = createServiceRoleClient();
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!;
+
+  try {
+    const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email,
+      options: {
+        redirectTo: `${baseUrl}/auth/callback`,
+      },
+    });
+
+    if (error || !data?.properties?.action_link) {
+      console.error('Failed to generate magic link:', error);
+      return `${baseUrl}/portal`;
+    }
+
+    // Replace the Supabase redirect with our callback
+    const url = new URL(data.properties.action_link);
+    url.searchParams.set('redirect_to', `${baseUrl}/auth/callback`);
+    return url.toString();
+  } catch (err) {
+    console.error('Magic link generation error:', err);
+    return `${baseUrl}/portal`;
+  }
+}
+
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export async function POST(req: Request) {
@@ -87,8 +115,8 @@ export async function POST(req: Request) {
           console.error('Error upserting customer:', customerError);
         }
 
-        // Send welcome email
-        const portalUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/portal`;
+        // Send welcome email with auto-login link
+        const portalUrl = await generatePortalLink(customer.email);
 
         console.log('Sending welcome email:', {
           to: customer.email,
@@ -175,10 +203,10 @@ export async function POST(req: Request) {
 
         // Send appropriate email
         if (session.mode === 'subscription') {
-          const portalUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/portal`;
           const plan = session.metadata?.plan as 'one-loaf' | 'two-loaf' | undefined;
 
           if (customerEmail) {
+            const portalUrl = await generatePortalLink(customerEmail);
             await sendSubscriptionWelcome({
               to: customerEmail,
               customerName: firstName,
@@ -237,10 +265,11 @@ export async function POST(req: Request) {
 
         if (customer.email) {
           const nameParts = customer.name?.split(' ') || ['', ''];
+          const portalUrl = await generatePortalLink(customer.email);
           await sendPaymentFailed({
             to: customer.email,
             customerName: nameParts[0],
-            portalUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
+            portalUrl,
           });
         }
         break;
@@ -254,10 +283,11 @@ export async function POST(req: Request) {
 
           if (customer.email) {
             const nameParts = customer.name?.split(' ') || ['', ''];
+            const portalUrl = await generatePortalLink(customer.email);
             await sendSubscriptionPaused({
               to: customer.email,
               customerName: nameParts[0],
-              portalUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
+              portalUrl,
             });
           }
         }
@@ -270,10 +300,11 @@ export async function POST(req: Request) {
 
         if (customer.email) {
           const nameParts = customer.name?.split(' ') || ['', ''];
+          const portalUrl = await generatePortalLink(customer.email);
           await sendSubscriptionCancelled({
             to: customer.email,
             customerName: nameParts[0],
-            portalUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
+            portalUrl,
           });
         }
         break;
