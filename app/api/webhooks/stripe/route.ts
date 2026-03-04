@@ -36,16 +36,21 @@ export async function POST(req: Request) {
     switch (event.type) {
       case 'customer.subscription.created': {
         const subscription = event.data.object as Stripe.Subscription;
-        
+
         // Get customer details
         const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
-        
+
         if (!customer.email) break;
-        
+
         // Split name into first and last
         const nameParts = customer.name?.split(' ') || ['', ''];
         const firstName = nameParts[0] || '';
         const lastName = nameParts.slice(1).join(' ') || '';
+
+        // Determine plan from price ID
+        const priceId = subscription.items.data[0]?.price?.id;
+        const plan = priceId === process.env.STRIPE_PRICE_ID_ONE_LOAF ? 'one-loaf' : 'two-loaf';
+        const deliveryDay = customer.metadata?.delivery_day || 'Thursday';
 
         // Upsert customer in Supabase
         const { error: customerError } = await supabase
@@ -65,7 +70,7 @@ export async function POST(req: Request) {
           console.error('Error upserting customer:', customerError);
         }
 
-        // Send welcome email (once DNS works)
+        // Send welcome email
         const portalSession = await stripe.billingPortal.sessions.create({
           customer: customer.id,
           return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
@@ -74,9 +79,10 @@ export async function POST(req: Request) {
         await sendSubscriptionWelcome({
           to: customer.email,
           customerName: firstName,
-          deliveryDay: 'Thursday',
-          deliveryDate: 'TBD',
+          deliveryDay,
+          deliveryDate: '',
           portalUrl: portalSession.url,
+          plan: plan as 'one-loaf' | 'two-loaf',
         });
 
         break;
@@ -126,6 +132,8 @@ export async function POST(req: Request) {
             return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/portal`,
           });
 
+          const plan = session.metadata?.plan as 'one-loaf' | 'two-loaf' | undefined;
+
           if (customerEmail) {
             await sendSubscriptionWelcome({
               to: customerEmail,
@@ -133,6 +141,7 @@ export async function POST(req: Request) {
               deliveryDay,
               deliveryDate,
               portalUrl: portalSession.url,
+              plan,
             });
           }
         } else {

@@ -8,6 +8,7 @@ interface SubscriptionWelcomeProps {
   deliveryDay: string;
   deliveryDate: string;
   portalUrl: string;
+  plan?: 'one-loaf' | 'two-loaf';
 }
 
 export const SubscriptionWelcome = ({
@@ -15,7 +16,11 @@ export const SubscriptionWelcome = ({
   deliveryDay,
   deliveryDate,
   portalUrl,
+  plan = 'two-loaf',
 }: SubscriptionWelcomeProps) => {
+  const loavesPerWeek = plan === 'one-loaf' ? '1 loaf' : '2 loaves';
+  const loavesPerCycle = plan === 'one-loaf' ? '4 loaves' : '8 loaves';
+  const price = plan === 'one-loaf' ? '$38' : '$68';
   return (
     <EmailLayout previewText="Welcome to weekly fresh-milled sourdough!">
       {/* Hero Image */}
@@ -38,16 +43,17 @@ export const SubscriptionWelcome = ({
         </Text>
 
         <Text style={paragraph}>
-          Welcome to weekly fresh-milled sourdough! Your first delivery is scheduled for <strong>{deliveryDay}, {deliveryDate}</strong>.
+          Welcome to weekly fresh-milled sourdough! Your first delivery is scheduled for <strong>{deliveryDay}{deliveryDate ? `, ${deliveryDate}` : ''}</strong>.
         </Text>
 
         {/* What You're Getting */}
         <Section style={infoBox}>
           <Text style={infoBoxHeading}>What You're Getting:</Text>
           <Text style={infoBoxText}>
-            • 2 loaves every week<br />
+            • {loavesPerWeek} every week ({loavesPerCycle} every 4 weeks)<br />
+            • {price} every 4 weeks<br />
             • Delivered {deliveryDay}<br />
-            • Baked fresh the morning of delivery
+            • Baked fresh within 24 hours of delivery
           </Text>
         </Section>
 
