@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 export default function SubscribePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [selectedTier, setSelectedTier] = useState<'bread' | 'bread-pastries'>('bread')
+  const [selectedTier, setSelectedTier] = useState<'one-loaf' | 'two-loaf'>('two-loaf')
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -20,27 +20,27 @@ export default function SubscribePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    // Block submission if Bread + Pastries is selected (coming soon)
-    if (selectedTier === 'bread-pastries') {
-      alert('Bread + Pastries tier coming soon! Please select Bread Only to continue.')
-      return
-    }
-    
     setLoading(true)
 
     try {
+      const deliveryAddress = {
+        street: formData.streetAddress,
+        city: formData.city,
+        zipCode: formData.zipCode,
+      }
+
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
-          tier: selectedTier
+          email: formData.email,
+          deliveryDay: formData.deliveryDay,
+          deliveryAddress: deliveryAddress,
+          plan: selectedTier,
         }),
       })
-
       const data = await response.json()
-      
+
       if (data.url) {
         window.location.href = data.url
       } else {
@@ -53,11 +53,13 @@ export default function SubscribePage() {
     }
   }
 
+  const tierPrice = selectedTier === 'one-loaf' ? '$38' : '$68'
+
   return (
     <div>
       {/* Hero - Different from Shop page */}
       <section className="relative h-96 flex items-center justify-center">
-        <div 
+        <div
           className="absolute inset-0 z-0"
           style={{
             backgroundImage: 'url(/images/bread-sliced-butter-lifestyle.jpg)',
@@ -66,7 +68,7 @@ export default function SubscribePage() {
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent" />
-        
+
         <div className="relative z-10 text-center px-4 max-w-4xl">
           <h1 className="text-5xl md:text-6xl font-bold mb-4 text-white drop-shadow-2xl">
             Fresh Bread, Delivered Weekly
@@ -81,7 +83,7 @@ export default function SubscribePage() {
       <section className="py-16 bg-gradient-to-b from-white to-amber-50">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12 text-gray-900">What You Get</h2>
-          
+
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white rounded-xl shadow-lg overflow-hidden">
               <div className="h-48 overflow-hidden">
@@ -139,45 +141,46 @@ export default function SubscribePage() {
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-4xl font-bold text-center mb-4 text-gray-900">Choose Your Plan</h2>
           <p className="text-center text-gray-600 mb-12 text-lg">Select the subscription that fits your needs</p>
-          
+
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* Bread Only Tier */}
-            <div 
-              onClick={() => setSelectedTier('bread')}
+            {/* 1 Loaf/Week Tier */}
+            <div
+              onClick={() => setSelectedTier('one-loaf')}
               className={`bg-white rounded-xl shadow-xl overflow-hidden cursor-pointer transition-all ${
-                selectedTier === 'bread' ? 'ring-4 ring-offset-2' : 'hover:shadow-2xl'
+                selectedTier === 'one-loaf' ? 'ring-4 ring-offset-2' : 'hover:shadow-2xl'
               }`}
-              style={selectedTier === 'bread' ? { '--tw-ring-color': '#5B7C99' } as React.CSSProperties : {}}
+              style={selectedTier === 'one-loaf' ? { '--tw-ring-color': '#5B7C99' } as React.CSSProperties : {}}
             >
               <div className="h-56 overflow-hidden">
                 <img
                   src="/images/bread-sliced-warm-light.jpg"
-                  alt="Bread subscription"
+                  alt="1 loaf per week subscription"
                   className="w-full h-full object-cover"
                 />
               </div>
               <div className="p-8">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-2xl font-bold text-gray-900">Bread Only</h3>
-                  {selectedTier === 'bread' && (
+                  <h3 className="text-2xl font-bold text-gray-900">1 Loaf/Week</h3>
+                  {selectedTier === 'one-loaf' && (
                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: '#5B7C99' }}>
                       ✓
                     </div>
                   )}
                 </div>
-                <div className="text-4xl font-bold mb-4" style={{ color: '#5B7C99' }}>$75<span className="text-xl text-gray-600">/month</span></div>
+                <div className="text-4xl font-bold mb-2" style={{ color: '#5B7C99' }}>$38<span className="text-xl text-gray-600">/4 weeks</span></div>
+                <p className="text-sm text-gray-500 mb-4">$9.50/loaf</p>
                 <ul className="space-y-3 mb-6">
                   <li className="flex items-start gap-2">
                     <svg className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#5B7C99' }} fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-gray-700">2 fresh loaves per week</span>
+                    <span className="text-gray-700">1 fresh loaf per week</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <svg className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#5B7C99' }} fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-gray-700">8 loaves per month</span>
+                    <span className="text-gray-700">4 loaves every 4 weeks</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <svg className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#5B7C99' }} fill="currentColor" viewBox="0 0 20 20">
@@ -195,36 +198,37 @@ export default function SubscribePage() {
               </div>
             </div>
 
-            {/* Bread + Pastries Tier - COMING SOON */}
-            <div 
-              onClick={() => setSelectedTier('bread-pastries')}
-              className={`bg-white rounded-xl shadow-xl overflow-hidden cursor-pointer transition-all relative opacity-75 ${
-                selectedTier === 'bread-pastries' ? 'ring-4 ring-offset-2' : 'hover:shadow-2xl'
+            {/* 2 Loaves/Week Tier */}
+            <div
+              onClick={() => setSelectedTier('two-loaf')}
+              className={`bg-white rounded-xl shadow-xl overflow-hidden cursor-pointer transition-all relative ${
+                selectedTier === 'two-loaf' ? 'ring-4 ring-offset-2' : 'hover:shadow-2xl'
               }`}
-              style={selectedTier === 'bread-pastries' ? { '--tw-ring-color': '#5B7C99' } as React.CSSProperties : {}}
+              style={selectedTier === 'two-loaf' ? { '--tw-ring-color': '#5B7C99' } as React.CSSProperties : {}}
             >
-              {/* COMING SOON Banner */}
-              <div className="absolute top-4 left-4 right-4 z-10 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-lg text-center font-bold shadow-xl transform -rotate-1">
-                🎉 COMING SOON
+              {/* Best Value Badge */}
+              <div className="absolute top-4 right-4 z-10 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-1.5 rounded-full text-sm font-bold shadow-lg">
+                Best Value
               </div>
-              
+
               <div className="h-56 overflow-hidden">
                 <img
                   src="/images/avocado-toast-lifestyle.jpg"
-                  alt="Bread and pastries subscription"
+                  alt="2 loaves per week subscription"
                   className="w-full h-full object-cover"
                 />
               </div>
               <div className="p-8">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-2xl font-bold text-gray-900">Bread + Pastries</h3>
-                  {selectedTier === 'bread-pastries' && (
+                  <h3 className="text-2xl font-bold text-gray-900">2 Loaves/Week</h3>
+                  {selectedTier === 'two-loaf' && (
                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: '#5B7C99' }}>
                       ✓
                     </div>
                   )}
                 </div>
-                <div className="text-4xl font-bold mb-4" style={{ color: '#5B7C99' }}>$125<span className="text-xl text-gray-600">/month</span></div>
+                <div className="text-4xl font-bold mb-2" style={{ color: '#5B7C99' }}>$68<span className="text-xl text-gray-600">/4 weeks</span></div>
+                <p className="text-sm text-gray-500 mb-4">$8.50/loaf — save $1/loaf</p>
                 <ul className="space-y-3 mb-6">
                   <li className="flex items-start gap-2">
                     <svg className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#5B7C99' }} fill="currentColor" viewBox="0 0 20 20">
@@ -236,13 +240,7 @@ export default function SubscribePage() {
                     <svg className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#5B7C99' }} fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>
-                    <span className="text-gray-700">4 artisan pastries per week</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <svg className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#5B7C99' }} fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-gray-700">Rotating seasonal varieties</span>
+                    <span className="text-gray-700">8 loaves every 4 weeks</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <svg className="w-5 h-5 mt-0.5 flex-shrink-0" style={{ color: '#5B7C99' }} fill="currentColor" viewBox="0 0 20 20">
@@ -269,7 +267,7 @@ export default function SubscribePage() {
           <div className="bg-white rounded-xl shadow-xl p-8 md:p-12">
             <h2 className="text-3xl font-bold mb-2 text-gray-900">Start Your Subscription</h2>
             <p className="text-gray-600 mb-8">Complete your delivery details below</p>
-            
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -369,13 +367,13 @@ export default function SubscribePage() {
                 <p className="text-sm text-gray-600 mt-2">Baked fresh the night before delivery</p>
               </div>
 
-              <button 
-                type="submit" 
-                disabled={loading || selectedTier === 'bread-pastries'} 
+              <button
+                type="submit"
+                disabled={loading}
                 className="w-full text-white py-4 rounded-lg font-bold text-lg hover:opacity-90 disabled:opacity-50 transition shadow-lg"
                 style={{ backgroundColor: '#5B7C99' }}
               >
-                {loading ? 'Processing...' : selectedTier === 'bread-pastries' ? 'Coming Soon - Select Bread Only' : `Subscribe - $75/month`}
+                {loading ? 'Processing...' : `Subscribe - ${tierPrice} every 4 weeks`}
               </button>
 
               <p className="text-xs text-center text-gray-500">

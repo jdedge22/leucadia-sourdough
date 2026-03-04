@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe, STRIPE_PRICE_ID_BREAD_ONLY } from '@/lib/stripe/server'
+import { stripe, STRIPE_PRICE_ID_ONE_LOAF, STRIPE_PRICE_ID_TWO_LOAF } from '@/lib/stripe/server'
 import { createServerClient } from '@/lib/supabase/server'
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, deliveryDay, deliveryAddress } = await req.json()
+    const { email, deliveryDay, deliveryAddress, plan } = await req.json()
 
-    if (!email || !deliveryDay || !deliveryAddress) {
+    if (!email || !deliveryDay || !deliveryAddress || !plan) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       )
     }
+
+    const priceId = plan === 'one-loaf' ? STRIPE_PRICE_ID_ONE_LOAF : STRIPE_PRICE_ID_TWO_LOAF
 
     const supabase = createServerClient()
 
@@ -41,7 +43,7 @@ export async function POST(req: NextRequest) {
       payment_method_types: ['card'],
       line_items: [
         {
-          price: STRIPE_PRICE_ID_BREAD_ONLY,
+          price: priceId,
           quantity: 1,
         },
       ],
@@ -50,6 +52,7 @@ export async function POST(req: NextRequest) {
       metadata: {
         delivery_day: deliveryDay,
         delivery_address: JSON.stringify(deliveryAddress),
+        plan,
       },
     })
 

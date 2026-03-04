@@ -5,5 +5,5 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   typescript: true,
 })
 
-export const STRIPE_PRICE_ID_BREAD_ONLY = process.env.STRIPE_PRICE_ID_BREAD_ONLY!
-export const STRIPE_PRICE_ID_BREAD_PASTRIES = process.env.STRIPE_PRICE_ID_BREAD_PASTRIES!
+export const STRIPE_PRICE_ID_ONE_LOAF = process.env.STRIPE_PRICE_ID_ONE_LOAF!
+export const STRIPE_PRICE_ID_TWO_LOAF = process.env.STRIPE_PRICE_ID_TWO_LOAF!

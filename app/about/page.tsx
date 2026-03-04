@@ -229,10 +229,10 @@ export default function AboutPage() {
             Sign Up for Weekly Delivery
           </Link>
           <Link
-            href="/shop"
+            href="/"
             className="px-8 py-4 rounded-lg font-semibold text-lg transition hover:scale-105 bg-white text-gray-900"
           >
-            Shop Breads
+            Our Breads
           </Link>
         </div>
       </section>

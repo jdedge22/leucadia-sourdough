@@ -1,23 +1,21 @@
 # Leucadia Sourdough
 
-E-commerce and subscription platform for fresh-milled, organic sourdough bread delivery in North County San Diego.
+Subscription platform for fresh-milled, organic sourdough bread delivery in North County San Diego.
 
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router) with React 19 and TypeScript
 - **Styling**: Tailwind CSS 4
 - **Auth & Database**: Supabase (magic link auth, PostgreSQL)
-- **Payments**: Stripe (subscriptions + one-time purchases)
+- **Payments**: Stripe (subscriptions)
 - **Email**: SendGrid with React Email templates
 
 ## Features
 
-- Product catalog with 3 bread varieties
-- Shopping cart with one-time purchase checkout
-- Monthly subscription signup ($75/month, 2 loaves/week)
+- Two subscription tiers: 1 Loaf/Week ($38/4wk) and 2 Loaves/Week ($68/4wk)
 - Customer portal for subscription management
 - Magic link authentication
-- Automated email notifications (order confirmation, subscription lifecycle)
+- Automated email notifications (subscription lifecycle)
 - Stripe webhook handling for payment events
 - Geo-targeted local landing pages
 
@@ -41,7 +39,8 @@ SUPABASE_SERVICE_ROLE_KEY=
 # Stripe
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
 STRIPE_SECRET_KEY=
-STRIPE_PRICE_ID_BREAD_ONLY=
+STRIPE_PRICE_ID_ONE_LOAF=
+STRIPE_PRICE_ID_TWO_LOAF=
 STRIPE_WEBHOOK_SECRET=
 
 # SendGrid
@@ -74,15 +73,11 @@ stripe listen --forward-to localhost:3000/api/webhooks/stripe
 app/
   api/                        # API routes
     create-checkout-session/  # Subscription checkout
-    create-one-time-checkout/ # One-time purchase
     create-portal-session/    # Stripe billing portal
     subscription/             # Subscription data
     webhooks/stripe/          # Stripe webhook handler
-  components/                 # React components
-  context/                    # Cart state (React Context)
-  about/, cart/, checkout/,
-  login/, portal/, shop/,
-  subscribe/                  # Page routes
+  about/, login/, portal/,
+  subscribe/, local/          # Page routes
 emails/                       # Email templates (React Email)
 lib/
   stripe/                     # Stripe client/server config
@@ -94,7 +89,6 @@ lib/
 | Route | Method | Description |
 |-------|--------|-------------|
 | `/api/create-checkout-session` | POST | Create Stripe subscription checkout |
-| `/api/create-one-time-checkout` | POST | Create one-time purchase checkout |
 | `/api/create-portal-session` | POST | Open Stripe billing portal |
 | `/api/subscription` | GET | Fetch subscription details |
 | `/api/webhooks/stripe` | POST | Stripe webhook receiver |

@@ -189,10 +189,10 @@ function LocalLandingContent() {
               Start Your Subscription
             </Link>
             <Link
-              href="/shop"
+              href="/"
               className="inline-block text-gray-700 hover:text-gray-900 px-12 py-5 rounded-lg text-xl font-semibold transition border-2 border-gray-300 hover:border-gray-400 bg-white"
             >
-              Try One Loaf First
+              Learn More
             </Link>
           </div>
 
@@ -218,9 +218,9 @@ function LocalLandingContent() {
             </div>
 
             <div className="border-b border-gray-200 pb-6">
-              <h3 className="text-xl font-bold mb-2 text-gray-900">Can I try it before subscribing?</h3>
+              <h3 className="text-xl font-bold mb-2 text-gray-900">What if I only need one loaf a week?</h3>
               <p className="text-gray-700">
-                Absolutely. You can buy individual loaves from our <Link href="/shop" className="underline font-semibold" style={{ color: '#5B7C99' }}>shop page</Link> before committing to a subscription.
+                We offer a <Link href="/subscribe" className="underline font-semibold" style={{ color: '#5B7C99' }}>1 Loaf/Week plan</Link> starting at $38 every 4 weeks. Cancel anytime.
               </p>
             </div>
 
