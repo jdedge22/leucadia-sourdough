@@ -36,7 +36,11 @@ export async function POST(req: Request) {
   try {
     switch (event.type) {
       case 'customer.subscription.created': {
-        const subscription = event.data.object as Stripe.Subscription;
+        // Fetch full subscription with expanded items to get quantity
+        const subscription = await stripe.subscriptions.retrieve(
+          (event.data.object as Stripe.Subscription).id,
+          { expand: ['items.data.price'] }
+        );
 
         // Get customer details
         const customer = await stripe.customers.retrieve(subscription.customer as string) as Stripe.Customer;
