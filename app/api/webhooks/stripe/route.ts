@@ -54,10 +54,14 @@ export async function POST(req: Request) {
 
         // Determine plan from price ID
         const priceId = subscription.items.data[0]?.price?.id;
-        const quantity = subscription.items.data[0]?.quantity || 1;
         const isRestaurant = priceId === process.env.STRIPE_PRICE_ID_RESTAURANT;
         const isGrocery = priceId === process.env.STRIPE_PRICE_ID_GROCERY;
         const isWholesale = isRestaurant || isGrocery;
+
+        // For wholesale, read loaf_count from customer metadata (package pricing = qty always 1)
+        const quantity = isWholesale
+          ? parseInt(customer.metadata?.loaf_count || '0', 10) || subscription.items.data[0]?.quantity || 1
+          : subscription.items.data[0]?.quantity || 1;
 
         const deliveryDay = customer.metadata?.delivery_day || 'Thursday';
         const breadSelections = customer.metadata?.bread_selections

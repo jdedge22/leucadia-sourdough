@@ -4,6 +4,8 @@ import { createServerClient } from '@/lib/supabase/server'
 import {
   STRIPE_PRICE_ID_ONE_LOAF,
   STRIPE_PRICE_ID_TWO_LOAF,
+  STRIPE_PRICE_ID_RESTAURANT,
+  STRIPE_PRICE_ID_GROCERY,
 } from '@/lib/stripe/server'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -64,14 +66,18 @@ export async function POST(req: Request) {
     const sub = subscriptions.data[0] as any
     const priceId = sub.items.data[0].price.id
     const quantity = sub.items.data[0].quantity || 1
+    const isWholesale = priceId === STRIPE_PRICE_ID_RESTAURANT || priceId === STRIPE_PRICE_ID_GROCERY
 
     let expectedLoafCount: number
     if (priceId === STRIPE_PRICE_ID_ONE_LOAF) {
       expectedLoafCount = 1
     } else if (priceId === STRIPE_PRICE_ID_TWO_LOAF) {
       expectedLoafCount = 2
+    } else if (isWholesale) {
+      // Package pricing: read loaf_count from customer metadata
+      const stripeCustomer = await stripe.customers.retrieve(customer.stripe_customer_id) as any
+      expectedLoafCount = parseInt(stripeCustomer.metadata?.loaf_count || '0', 10) || quantity
     } else {
-      // Wholesale: quantity is the loaf count
       expectedLoafCount = quantity
     }
 

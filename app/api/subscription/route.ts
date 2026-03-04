@@ -102,7 +102,11 @@ export async function GET() {
 
     const customerType = getCustomerType(priceId)
     const isWholesale = customerType === 'restaurant' || customerType === 'grocery'
-    const loafCount = getLoafCount(priceId, quantity)
+
+    // For wholesale, read loaf_count from customer metadata (package pricing)
+    const loafCount = isWholesale
+      ? parseInt(stripeCustomer.metadata?.loaf_count || '0', 10) || getLoafCount(priceId, quantity)
+      : getLoafCount(priceId, quantity)
 
     const deliveryDay = stripeCustomer.metadata?.delivery_day || 'Thursday'
     const nextDelivery = getNextDeliveryDate(deliveryDay)

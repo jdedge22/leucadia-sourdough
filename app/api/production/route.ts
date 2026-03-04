@@ -112,7 +112,8 @@ export async function GET() {
       } else if (priceId === STRIPE_PRICE_ID_TWO_LOAF) {
         loafCount = 2
       } else if (priceId === STRIPE_PRICE_ID_RESTAURANT || priceId === STRIPE_PRICE_ID_GROCERY) {
-        loafCount = quantity
+        // Package pricing: read loaf_count from customer metadata, fall back to subscription quantity
+        loafCount = parseInt(customer.metadata?.loaf_count || '0', 10) || quantity
       } else {
         loafCount = 1
       }
