@@ -21,6 +21,7 @@ export const SubscriptionWelcome = ({
   const loavesPerWeek = plan === 'one-loaf' ? '1 loaf' : '2 loaves';
   const loavesPerCycle = plan === 'one-loaf' ? '4 loaves' : '8 loaves';
   const price = plan === 'one-loaf' ? '$38' : '$68';
+  const formattedDeliveryDay = deliveryDay.charAt(0).toUpperCase() + deliveryDay.slice(1);
   return (
     <EmailLayout previewText="Welcome to weekly fresh-milled sourdough!">
       {/* Hero Image */}
@@ -43,7 +44,7 @@ export const SubscriptionWelcome = ({
         </Text>
 
         <Text style={paragraph}>
-          Welcome to weekly fresh-milled sourdough! Your first delivery is scheduled for <strong>{deliveryDay}{deliveryDate ? `, ${deliveryDate}` : ''}</strong>.
+          Welcome to weekly fresh-milled sourdough! Your first delivery is scheduled for <strong>{formattedDeliveryDay}{deliveryDate ? `, ${deliveryDate}` : ''}</strong>.
         </Text>
 
         {/* What You're Getting */}
@@ -52,7 +53,7 @@ export const SubscriptionWelcome = ({
           <Text style={infoBoxText}>
             • {loavesPerWeek} every week ({loavesPerCycle} every 4 weeks)<br />
             • {price} every 4 weeks<br />
-            • Delivered {deliveryDay}<br />
+            • Delivered {formattedDeliveryDay}<br />
             • Baked fresh within 24 hours of delivery
           </Text>
         </Section>
