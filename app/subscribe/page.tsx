@@ -464,7 +464,7 @@ export default function SubscribePage() {
                   <option value="friday">Friday</option>
                   <option value="saturday">Saturday</option>
                 </select>
-                <p className="text-sm text-gray-600 mt-2">Baked fresh the night before delivery</p>
+                <p className="text-sm text-gray-600 mt-2">Fresh milled and baked within 24 hours of delivery</p>
               </div>
 
               <button
