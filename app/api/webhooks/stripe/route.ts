@@ -29,18 +29,17 @@ async function generatePortalLink(email: string): Promise<string> {
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
       email,
-      options: {
-        redirectTo: `${baseUrl}/auth/callback`,
-      },
     });
 
-    if (error || !data?.properties?.action_link) {
+    if (error || !data?.properties?.hashed_token) {
       console.error('Failed to generate magic link:', error);
       return `${baseUrl}/portal`;
     }
 
-    console.log('Generated portal link for:', email);
-    return data.properties.action_link;
+    // Link directly to our callback with the token hash — no Supabase redirect
+    const portalUrl = `${baseUrl}/auth/callback?token_hash=${data.properties.hashed_token}&type=magiclink`;
+    console.log('Generated auto-login link for:', email);
+    return portalUrl;
   } catch (err) {
     console.error('Magic link generation error:', err);
     return `${baseUrl}/portal`;
