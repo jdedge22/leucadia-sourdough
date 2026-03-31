@@ -38,7 +38,6 @@ async function generatePortalLink(email: string): Promise<string> {
 
     // Link directly to our callback with the token hash — no Supabase redirect
     const portalUrl = `${baseUrl}/auth/callback?token_hash=${data.properties.hashed_token}&type=magiclink`;
-    console.log('Generated auto-login link for:', email);
     return portalUrl;
   } catch (err) {
     console.error('Magic link generation error:', err);
@@ -121,13 +120,6 @@ export async function POST(req: Request) {
         // Send welcome email with auto-login link
         const portalUrl = await generatePortalLink(customer.email);
 
-        console.log('Sending welcome email:', {
-          to: customer.email,
-          isWholesale,
-          priceId,
-          quantity,
-          portalUrl,
-        });
 
         let emailResult;
         if (isWholesale) {
@@ -158,7 +150,6 @@ export async function POST(req: Request) {
           });
         }
 
-        console.log('Email result:', JSON.stringify(emailResult));
 
         break;
       }
