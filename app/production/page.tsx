@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
 
 const VARIETY_LABELS: Record<string, string> = {
   original: 'Original',
@@ -55,7 +57,20 @@ function gramsToDisplay(g: number): string {
   return `${Math.round(g)} g`
 }
 
-export default function ProductionPage() {
+export default function ProductionPageWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-amber-50">
+        <p className="text-lg text-gray-600">Loading...</p>
+      </div>
+    }>
+      <ProductionPage />
+    </Suspense>
+  )
+}
+
+function ProductionPage() {
+  const searchParams = useSearchParams()
   const [data, setData] = useState<ProductionData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -75,7 +90,7 @@ export default function ProductionPage() {
     }
   }, [])
 
-  const [previewMode, setPreviewMode] = useState(false)
+  const [previewMode, setPreviewMode] = useState(searchParams.get('preview') !== null)
 
   useEffect(() => {
     fetchData()
@@ -117,7 +132,7 @@ export default function ProductionPage() {
     window.print()
   }
 
-  if (loading) {
+  if (loading && !previewMode) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-amber-50">
         <p className="text-lg text-gray-600">Loading production data...</p>
@@ -125,7 +140,7 @@ export default function ProductionPage() {
     )
   }
 
-  if (error || (!data && !previewMode)) {
+  if (!previewMode && (error || !data)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-amber-50">
         <div className="text-center">
@@ -142,7 +157,7 @@ export default function ProductionPage() {
     )
   }
 
-  const displayData = activeData!
+  const displayData = previewMode ? PREVIEW_DATA : data!
   const { breakdown, totals, dayTotals, grandTotal, weeks, subscriberCount, varieties } = displayData
   const days = ['thursday', 'friday', 'saturday'] as const
 
@@ -190,17 +205,26 @@ export default function ProductionPage() {
       <div ref={printRef} className="min-h-screen bg-amber-50 py-8 px-4 print-area">
         <div className="max-w-5xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8 no-print">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Baking Production</h1>
-              <p className="text-gray-600 mt-1">
-                {subscriberCount} active subscriber{subscriberCount !== 1 ? 's' : ''}
-              </p>
+          <div className="mb-8 no-print">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Baking Production</h1>
+                <p className="text-gray-600 mt-1 text-sm md:text-base">
+                  {subscriberCount} active subscriber{subscriberCount !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <button
+                onClick={fetchData}
+                className="text-white px-4 py-2 rounded-lg hover:opacity-90 transition text-sm font-medium flex-shrink-0"
+                style={{ backgroundColor: '#5B7C99' }}
+              >
+                Refresh
+              </button>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setPreviewMode(!previewMode)}
-                className={`px-4 py-2 rounded-lg transition text-sm font-medium border-2 ${
+                className={`px-3 py-1.5 rounded-lg transition text-sm font-medium border-2 ${
                   previewMode
                     ? 'border-amber-400 bg-amber-50 text-amber-700'
                     : 'border-gray-300 text-gray-700 hover:border-gray-400'
@@ -210,16 +234,9 @@ export default function ProductionPage() {
               </button>
               <button
                 onClick={handlePrint}
-                className="border-2 border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:border-gray-400 transition text-sm font-medium"
+                className="border-2 border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg hover:border-gray-400 transition text-sm font-medium"
               >
                 Print Schedule
-              </button>
-              <button
-                onClick={fetchData}
-                className="text-white px-4 py-2 rounded-lg hover:opacity-90 transition text-sm font-medium"
-                style={{ backgroundColor: '#5B7C99' }}
-              >
-                Refresh
               </button>
             </div>
           </div>
@@ -248,28 +265,28 @@ export default function ProductionPage() {
           )}
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8">
             {varieties.map((v) => (
-              <div key={v} className="bg-white rounded-lg shadow p-5">
-                <p className="text-sm text-gray-500 font-medium">{VARIETY_LABELS[v] || v}</p>
-                <p className="text-3xl font-bold mt-1" style={{ color: '#5B7C99' }}>
+              <div key={v} className="bg-white rounded-lg shadow p-4 md:p-5">
+                <p className="text-xs md:text-sm text-gray-500 font-medium truncate">{VARIETY_LABELS[v] || v}</p>
+                <p className="text-2xl md:text-3xl font-bold mt-1" style={{ color: '#5B7C99' }}>
                   {totals[v]}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">loaves / week</p>
               </div>
             ))}
-            <div className="bg-white rounded-lg shadow p-5 border-2" style={{ borderColor: '#5B7C99' }}>
-              <p className="text-sm font-medium" style={{ color: '#5B7C99' }}>
+            <div className="bg-white rounded-lg shadow p-4 md:p-5 border-2" style={{ borderColor: '#5B7C99' }}>
+              <p className="text-xs md:text-sm font-medium" style={{ color: '#5B7C99' }}>
                 Total
               </p>
-              <p className="text-3xl font-bold mt-1 text-gray-900">{grandTotal}</p>
+              <p className="text-2xl md:text-3xl font-bold mt-1 text-gray-900">{grandTotal}</p>
               <p className="text-xs text-gray-400 mt-1">loaves / week</p>
             </div>
           </div>
 
           {/* ── Day-by-Day Prep & Bake Schedule ── */}
           <div className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Prep & Bake Schedule</h2>
+            <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4">Prep & Bake Schedule</h2>
 
             {days.map((bakeDay) => {
               const dayCount = dayTotals[bakeDay]
@@ -282,29 +299,27 @@ export default function ProductionPage() {
               return (
                 <div key={bakeDay} className="bg-white rounded-lg shadow mb-6 overflow-hidden">
                   {/* Day header */}
-                  <div className="px-6 py-4 border-b border-gray-200" style={{ backgroundColor: '#f8f5f0' }}>
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-bold text-gray-900">
-                        {DAY_LABELS[bakeDay]} Delivery — {dayCount} loaves
-                      </h3>
-                      <span className="text-sm text-gray-500 font-medium">
-                        Prep: {prepDay} · Bake: {DAY_LABELS[bakeDay]}
-                      </span>
-                    </div>
+                  <div className="px-4 md:px-6 py-3 md:py-4 border-b border-gray-200" style={{ backgroundColor: '#f8f5f0' }}>
+                    <h3 className="text-base md:text-lg font-bold text-gray-900">
+                      {DAY_LABELS[bakeDay]} Delivery — {dayCount} loaves
+                    </h3>
+                    <p className="text-xs md:text-sm text-gray-500 font-medium mt-0.5">
+                      Prep: {prepDay} · Bake: {DAY_LABELS[bakeDay]}
+                    </p>
                   </div>
 
-                  <div className="p-6">
+                  <div className="p-4 md:p-6">
                     {/* Loaf breakdown */}
-                    <div className="mb-6">
-                      <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Loaf Breakdown</h4>
-                      <div className="grid grid-cols-3 gap-3">
+                    <div className="mb-5 md:mb-6">
+                      <h4 className="text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2 md:mb-3">Loaf Breakdown</h4>
+                      <div className="grid grid-cols-3 gap-2 md:gap-3">
                         {varieties.map((v) => {
                           const count = breakdown[bakeDay][v]
                           if (count === 0) return null
                           return (
-                            <div key={v} className="bg-gray-50 rounded-lg p-3 text-center">
-                              <p className="text-2xl font-bold text-gray-900">{count}</p>
-                              <p className="text-sm text-gray-600">{VARIETY_LABELS[v]}</p>
+                            <div key={v} className="bg-gray-50 rounded-lg p-2 md:p-3 text-center">
+                              <p className="text-xl md:text-2xl font-bold text-gray-900">{count}</p>
+                              <p className="text-xs md:text-sm text-gray-600 truncate">{VARIETY_LABELS[v]}</p>
                             </div>
                           )
                         })}
@@ -312,44 +327,44 @@ export default function ProductionPage() {
                     </div>
 
                     {/* Timeline */}
-                    <div className="mb-6">
-                      <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Timeline</h4>
+                    <div className="mb-5 md:mb-6">
+                      <h4 className="text-xs md:text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2 md:mb-3">Timeline</h4>
                       <div className="space-y-3">
-                        <div className="flex items-start gap-4">
-                          <div className="w-28 flex-shrink-0">
-                            <span className="text-xs font-bold text-white px-2 py-1 rounded" style={{ backgroundColor: '#d97706' }}>
+                        <div className="flex items-start gap-3 md:gap-4">
+                          <div className="w-24 md:w-28 flex-shrink-0">
+                            <span className="text-xs font-bold text-white px-2 py-1 rounded inline-block" style={{ backgroundColor: '#d97706' }}>
                               {prepDay} AM
                             </span>
                           </div>
-                          <div>
-                            <p className="font-medium text-gray-900">Feed Levain</p>
-                            <p className="text-sm text-gray-600">
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 text-sm md:text-base">Feed Levain</p>
+                            <p className="text-xs md:text-sm text-gray-600">
                               Need {gramsToDisplay(dayIngredients.starter)} mature starter by afternoon
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-start gap-4">
-                          <div className="w-28 flex-shrink-0">
-                            <span className="text-xs font-bold text-white px-2 py-1 rounded" style={{ backgroundColor: '#d97706' }}>
+                        <div className="flex items-start gap-3 md:gap-4">
+                          <div className="w-24 md:w-28 flex-shrink-0">
+                            <span className="text-xs font-bold text-white px-2 py-1 rounded inline-block" style={{ backgroundColor: '#d97706' }}>
                               {prepDay} PM
                             </span>
                           </div>
-                          <div>
-                            <p className="font-medium text-gray-900">Mix Dough & Shape</p>
-                            <p className="text-sm text-gray-600">
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 text-sm md:text-base">Mix Dough & Shape</p>
+                            <p className="text-xs md:text-sm text-gray-600">
                               Mix {dayCount} doughs, shape into bannetons, refrigerate 24 hrs
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-start gap-4">
-                          <div className="w-28 flex-shrink-0">
-                            <span className="text-xs font-bold text-white px-2 py-1 rounded" style={{ backgroundColor: '#5B7C99' }}>
+                        <div className="flex items-start gap-3 md:gap-4">
+                          <div className="w-24 md:w-28 flex-shrink-0">
+                            <span className="text-xs font-bold text-white px-2 py-1 rounded inline-block" style={{ backgroundColor: '#5B7C99' }}>
                               {DAY_LABELS[bakeDay]}
                             </span>
                           </div>
-                          <div>
-                            <p className="font-medium text-gray-900">Bake & Deliver</p>
-                            <p className="text-sm text-gray-600">
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 text-sm md:text-base">Bake & Deliver</p>
+                            <p className="text-xs md:text-sm text-gray-600">
                               Score & bake {dayCount} loaves straight from fridge
                             </p>
                           </div>
@@ -358,7 +373,7 @@ export default function ProductionPage() {
                     </div>
 
                     {/* Dough Calculator */}
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                       <div>
                         <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
                           Base Dough — {dayCount} loaves
@@ -415,10 +430,10 @@ export default function ProductionPage() {
 
           {/* ── Weekly Totals / Shopping List ── */}
           <div className="print-break mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Weekly Ingredient Totals</h2>
+            <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-3 md:mb-4">Weekly Ingredient Totals</h2>
             <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="p-6">
-                <div className="grid md:grid-cols-2 gap-6">
+              <div className="p-4 md:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
                       Base Ingredients — {grandTotal} loaves
@@ -494,34 +509,36 @@ export default function ProductionPage() {
 
           {/* ── Production Table (original) ── */}
           <div className="bg-white rounded-lg shadow overflow-hidden mb-8">
-            <div className="px-5 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Weekly Breakdown</h2>
+            <div className="px-4 md:px-5 py-3 md:py-4 border-b border-gray-200">
+              <h2 className="text-base md:text-lg font-semibold text-gray-900">Weekly Breakdown</h2>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-xs md:text-sm">
                 <thead>
                   <tr className="bg-gray-50 text-left">
-                    <th className="px-5 py-3 font-semibold text-gray-600">Day</th>
+                    <th className="px-3 md:px-5 py-3 font-semibold text-gray-600">Day</th>
                     {varieties.map((v) => (
-                      <th key={v} className="px-5 py-3 font-semibold text-gray-600 text-right">
-                        {VARIETY_LABELS[v] || v}
+                      <th key={v} className="px-2 md:px-5 py-3 font-semibold text-gray-600 text-right">
+                        <span className="hidden md:inline">{VARIETY_LABELS[v] || v}</span>
+                        <span className="md:hidden">{v === 'original' ? 'Orig' : v === 'everything' ? 'Evrythg' : 'Jal/Ch'}</span>
                       </th>
                     ))}
-                    <th className="px-5 py-3 font-semibold text-gray-600 text-right">Total</th>
+                    <th className="px-2 md:px-5 py-3 font-semibold text-gray-600 text-right">Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {days.map((day) => (
                     <tr key={day} className="border-t border-gray-100">
-                      <td className="px-5 py-3 font-medium text-gray-900">
-                        {DAY_LABELS[day]}
+                      <td className="px-3 md:px-5 py-3 font-medium text-gray-900">
+                        <span className="hidden md:inline">{DAY_LABELS[day]}</span>
+                        <span className="md:hidden">{DAY_LABELS[day].slice(0, 3)}</span>
                       </td>
                       {varieties.map((v) => (
-                        <td key={v} className="px-5 py-3 text-right text-gray-700">
+                        <td key={v} className="px-2 md:px-5 py-3 text-right text-gray-700">
                           {breakdown[day][v]}
                         </td>
                       ))}
-                      <td className="px-5 py-3 text-right font-semibold text-gray-900">
+                      <td className="px-2 md:px-5 py-3 text-right font-semibold text-gray-900">
                         {dayTotals[day]}
                       </td>
                     </tr>
@@ -529,13 +546,13 @@ export default function ProductionPage() {
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-gray-200 bg-gray-50">
-                    <td className="px-5 py-3 font-semibold text-gray-900">Total</td>
+                    <td className="px-3 md:px-5 py-3 font-semibold text-gray-900">Total</td>
                     {varieties.map((v) => (
-                      <td key={v} className="px-5 py-3 text-right font-semibold" style={{ color: '#5B7C99' }}>
+                      <td key={v} className="px-2 md:px-5 py-3 text-right font-semibold" style={{ color: '#5B7C99' }}>
                         {totals[v]}
                       </td>
                     ))}
-                    <td className="px-5 py-3 text-right font-bold text-gray-900">{grandTotal}</td>
+                    <td className="px-2 md:px-5 py-3 text-right font-bold text-gray-900">{grandTotal}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -544,8 +561,8 @@ export default function ProductionPage() {
 
           {/* 3-Week Forecast */}
           <div className="mb-8">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">3-Week Forecast</h2>
-            <div className="grid md:grid-cols-3 gap-4">
+            <h2 className="text-base md:text-lg font-semibold text-gray-900 mb-3 md:mb-4">3-Week Forecast</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
               {weeks.map((week) => (
                 <div key={week.label} className="bg-white rounded-lg shadow p-5">
                   <h3 className="font-semibold text-gray-900 mb-3">{week.label}</h3>
