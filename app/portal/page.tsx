@@ -19,6 +19,8 @@ type SubscriptionData = {
     deliveryDay: string
     nextDelivery: string
     isPaused: boolean
+    deliveryAddress: string
+    address: { line1: string; line2: string; city: string; state: string; zip: string } | null
   } | null
 }
 
@@ -43,6 +45,8 @@ const MOCK_RETAIL: SubscriptionData = {
     deliveryDay: 'Thursday',
     nextDelivery: 'Thursday, March 5, 2026',
     isPaused: false,
+    deliveryAddress: '123 Neptune Ave, Encinitas, CA 92024',
+    address: { line1: '123 Neptune Ave', line2: '', city: 'Encinitas', state: 'CA', zip: '92024' },
   },
 }
 
@@ -61,6 +65,8 @@ const MOCK_WHOLESALE: SubscriptionData = {
     deliveryDay: 'Thursday',
     nextDelivery: 'Thursday, March 5, 2026',
     isPaused: false,
+    deliveryAddress: '456 Coast Hwy, Encinitas, CA 92024',
+    address: { line1: '456 Coast Hwy', line2: '', city: 'Encinitas', state: 'CA', zip: '92024' },
   },
 }
 
@@ -84,6 +90,13 @@ function PortalPage() {
   const [varietyDraft, setVarietyDraft] = useState<Record<string, number>>({})
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [skipping, setSkipping] = useState(false)
+  const [resuming, setResuming] = useState(false)
+  const [editingAddress, setEditingAddress] = useState(false)
+  const [addressDraft, setAddressDraft] = useState({ line1: '', line2: '', city: '', state: '', zip: '' })
+  const [savingAddress, setSavingAddress] = useState(false)
+  const [addressError, setAddressError] = useState('')
+  const [actionMessage, setActionMessage] = useState('')
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -169,6 +182,74 @@ function PortalPage() {
     }
 
     setSaving(false)
+  }
+
+  async function handleSkip() {
+    setSkipping(true)
+    setActionMessage('')
+    const res = await fetch('/api/subscription/skip', { method: 'POST' })
+    if (res.ok) {
+      setActionMessage('Next delivery skipped! Your subscription will resume automatically.')
+      await fetchSubscription()
+    } else {
+      const err = await res.json()
+      setActionMessage(err.error || 'Failed to skip delivery')
+    }
+    setSkipping(false)
+  }
+
+  async function handleResume() {
+    setResuming(true)
+    setActionMessage('')
+    const res = await fetch('/api/subscription/resume', { method: 'POST' })
+    if (res.ok) {
+      setActionMessage('Subscription resumed! Your next delivery is back on schedule.')
+      await fetchSubscription()
+    } else {
+      const err = await res.json()
+      setActionMessage(err.error || 'Failed to resume subscription')
+    }
+    setResuming(false)
+  }
+
+  function startEditingAddress() {
+    const current = data?.subscription?.address
+    setAddressDraft({
+      line1: current?.line1 || '',
+      line2: current?.line2 || '',
+      city: current?.city || '',
+      state: current?.state || 'CA',
+      zip: current?.zip || '',
+    })
+    setAddressError('')
+    setEditingAddress(true)
+  }
+
+  async function saveAddress() {
+    if (!addressDraft.line1 || !addressDraft.city || !addressDraft.state || !addressDraft.zip) {
+      setAddressError('Please fill in address, city, state, and zip.')
+      return
+    }
+
+    setSavingAddress(true)
+    setAddressError('')
+
+    const res = await fetch('/api/subscription/update-address', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address: addressDraft }),
+    })
+
+    if (res.ok) {
+      setActionMessage('Delivery address updated!')
+      await fetchSubscription()
+      setEditingAddress(false)
+    } else {
+      const err = await res.json()
+      setAddressError(err.error || 'Failed to update address')
+    }
+
+    setSavingAddress(false)
   }
 
   if (loading) {
@@ -397,21 +478,33 @@ function PortalPage() {
               </button>
             </div>
 
+            {/* Action Message */}
+            {actionMessage && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-center">
+                <p className="text-blue-800 font-medium">{actionMessage}</p>
+              </div>
+            )}
+
             {/* Quick Actions */}
             <div className={`grid gap-6 ${isWholesale ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
               {!isWholesale && (
                 <>
                   <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center hover:shadow-2xl transition-shadow">
                     <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <span className="text-3xl">⏸️</span>
+                      <span className="text-3xl">{sub?.isPaused ? '▶️' : '⏸️'}</span>
                     </div>
-                    <h3 className="font-bold text-gray-900 text-lg mb-2">Skip Next Week</h3>
-                    <p className="text-sm text-gray-600 mb-6">Pause your next delivery</p>
+                    <h3 className="font-bold text-gray-900 text-lg mb-2">
+                      {sub?.isPaused ? 'Resume Deliveries' : 'Skip Next Week'}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-6">
+                      {sub?.isPaused ? 'Get back on schedule' : 'Pause your next delivery'}
+                    </p>
                     <button
-                      disabled={sub?.isPaused}
-                      className="text-blue-600 hover:text-blue-800 font-semibold border-b-2 border-transparent hover:border-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={sub?.isPaused ? handleResume : handleSkip}
+                      disabled={skipping || resuming}
+                      className="text-blue-600 hover:text-blue-800 font-semibold border-b-2 border-transparent hover:border-blue-600 transition-colors disabled:opacity-50"
                     >
-                      {sub?.isPaused ? 'Currently Paused' : 'Skip Delivery'}
+                      {skipping ? 'Skipping...' : resuming ? 'Resuming...' : sub?.isPaused ? 'Resume Now' : 'Skip Delivery'}
                     </button>
                   </div>
 
@@ -420,8 +513,13 @@ function PortalPage() {
                       <span className="text-3xl">📍</span>
                     </div>
                     <h3 className="font-bold text-gray-900 text-lg mb-2">Update Address</h3>
-                    <p className="text-sm text-gray-600 mb-6">Change delivery location</p>
-                    <button className="text-purple-600 hover:text-purple-800 font-semibold border-b-2 border-transparent hover:border-purple-600 transition-colors">
+                    <p className="text-sm text-gray-600 mb-6">
+                      {sub?.deliveryAddress || 'Change delivery location'}
+                    </p>
+                    <button
+                      onClick={startEditingAddress}
+                      className="text-purple-600 hover:text-purple-800 font-semibold border-b-2 border-transparent hover:border-purple-600 transition-colors"
+                    >
                       Edit Address
                     </button>
                   </div>
@@ -455,6 +553,90 @@ function PortalPage() {
                 </a>
               </div>
             </div>
+
+            {/* Address Edit Modal */}
+            {editingAddress && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6">Update Delivery Address</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+                      <input
+                        type="text"
+                        value={addressDraft.line1}
+                        onChange={(e) => setAddressDraft(d => ({ ...d, line1: e.target.value }))}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-400 focus:outline-none"
+                        placeholder="123 Main St"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Apt / Suite (optional)</label>
+                      <input
+                        type="text"
+                        value={addressDraft.line2}
+                        onChange={(e) => setAddressDraft(d => ({ ...d, line2: e.target.value }))}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-400 focus:outline-none"
+                        placeholder="Apt 4B"
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="col-span-1">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                        <input
+                          type="text"
+                          value={addressDraft.city}
+                          onChange={(e) => setAddressDraft(d => ({ ...d, city: e.target.value }))}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-400 focus:outline-none"
+                          placeholder="Encinitas"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                        <input
+                          type="text"
+                          value={addressDraft.state}
+                          onChange={(e) => setAddressDraft(d => ({ ...d, state: e.target.value }))}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-400 focus:outline-none"
+                          placeholder="CA"
+                          maxLength={2}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Zip</label>
+                        <input
+                          type="text"
+                          value={addressDraft.zip}
+                          onChange={(e) => setAddressDraft(d => ({ ...d, zip: e.target.value }))}
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-400 focus:outline-none"
+                          placeholder="92024"
+                          maxLength={10}
+                        />
+                      </div>
+                    </div>
+                    {addressError && (
+                      <p className="text-sm text-red-600">{addressError}</p>
+                    )}
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={saveAddress}
+                        disabled={savingAddress}
+                        className="flex-1 px-6 py-3 text-white rounded-xl font-semibold hover:opacity-90 transition-all disabled:opacity-50"
+                        style={{ backgroundColor: '#5B7C99' }}
+                      >
+                        {savingAddress ? 'Saving...' : 'Save Address'}
+                      </button>
+                      <button
+                        onClick={() => setEditingAddress(false)}
+                        className="px-6 py-3 text-gray-600 border-2 border-gray-300 rounded-xl font-semibold hover:border-gray-400"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

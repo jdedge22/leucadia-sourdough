@@ -119,6 +119,10 @@ export async function GET() {
       breadSelections = { original: loafCount }
     }
 
+    // Build delivery address from Stripe customer data
+    const deliveryAddress = stripeCustomer.metadata?.delivery_address || ''
+    const address = stripeCustomer.address
+
     return NextResponse.json({
       hasSubscription: true,
       customer: {
@@ -143,6 +147,14 @@ export async function GET() {
         deliveryDay,
         nextDelivery,
         isPaused: sub.pause_collection !== null,
+        deliveryAddress,
+        address: address ? {
+          line1: address.line1 || '',
+          line2: address.line2 || '',
+          city: address.city || '',
+          state: address.state || '',
+          zip: address.postal_code || '',
+        } : null,
       },
     })
   } catch (error: any) {
